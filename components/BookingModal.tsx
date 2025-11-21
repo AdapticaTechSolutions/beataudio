@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState } from 'react';
 import { XIcon, CheckCircleIcon, ArrowRightIcon, ArrowLeftIcon } from './icons';
 import { Calendar } from './Calendar';
 import { BOOKINGS, EVENT_TYPES, PACKAGES, EQUIPMENT_SHOWCASE } from '../constants';
@@ -26,55 +26,41 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
     venueAddress: '',
   });
 
-  // Memoize booked dates calculation
-  const bookedDates = useMemo(() => 
-    BOOKINGS
+  // Get confirmed booking dates
+  const bookedDates = BOOKINGS
     .filter(b => b.status === 'Confirmed')
-      .map(b => b.eventDate),
-    []
-  );
+    .map(b => b.eventDate);
 
-  // Memoize filtered packages to avoid recalculation on every render
-  const filteredPackages = useMemo(() => {
-    if (!selectedEventType) return PACKAGES;
-    
-    return PACKAGES.filter(pkg => {
-      if (selectedEventType === 'Weddings') return pkg.name.includes('Wedding');
-      if (selectedEventType === 'Corporate') return pkg.name.includes('Corporate');
-      if (selectedEventType === 'Kiddie Parties') return pkg.name.includes('Kids');
-      if (selectedEventType === 'Debuts') return pkg.name.includes('Debutante');
-      return true;
-    });
-  }, [selectedEventType]);
+  // Get packages filtered by event type
+  const filteredPackages = selectedEventType 
+    ? PACKAGES.filter(pkg => {
+        // Simple matching logic - you can enhance this
+        if (selectedEventType === 'Weddings') return pkg.name.includes('Wedding');
+        if (selectedEventType === 'Corporate') return pkg.name.includes('Corporate');
+        if (selectedEventType === 'Kiddie Parties') return pkg.name.includes('Kids');
+        if (selectedEventType === 'Debuts') return pkg.name.includes('Debutante');
+        return true;
+      })
+    : PACKAGES;
 
-  // Memoize package object lookup
-  const packageObj = useMemo(() => 
-    PACKAGES.find(p => p.name === selectedPackage),
-    [selectedPackage]
-  );
-  
-  const availableVenues = useMemo(() => packageObj?.venues || [], [packageObj]);
-  const packageEquipment = useMemo(() => 
-    packageObj?.equipment && packageObj.equipment.length > 0 
-      ? packageObj.equipment 
-      : EQUIPMENT_SHOWCASE,
-    [packageObj]
-  );
+  // Get selected package object
+  const packageObj = PACKAGES.find(p => p.name === selectedPackage);
+  const availableVenues = packageObj?.venues || [];
+  const packageEquipment = packageObj?.equipment || [];
 
-  // Memoize callbacks to prevent unnecessary re-renders
-  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  }, [onClose]);
+  };
 
-  const toggleVenue = useCallback((venueId: string) => {
+  const toggleVenue = (venueId: string) => {
     setSelectedVenues(prev => 
       prev.includes(venueId) 
         ? prev.filter(id => id !== venueId)
         : [...prev, venueId]
     );
-  }, []);
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -85,45 +71,35 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
           onSelectEventType={setSelectedEventType}
         />;
       case 2:
-        return <Step2SelectPackage
+        return <Step2ChoosePackage
           nextStep={() => setStep(3)}
           prevStep={() => setStep(1)}
           selectedPackage={selectedPackage}
           onSelectPackage={setSelectedPackage}
           packages={filteredPackages}
-        />;
-      case 3:
-        return <Step3EquipmentShowcase
-          nextStep={() => setStep(4)}
-          prevStep={() => setStep(2)}
-          equipment={packageEquipment.length > 0 ? packageEquipment : EQUIPMENT_SHOWCASE}
-        />;
-      case 4:
-        return <Step4SelectVenues
-          nextStep={() => setStep(5)}
-          prevStep={() => setStep(3)}
-          venues={availableVenues}
           selectedVenues={selectedVenues}
           onToggleVenue={toggleVenue}
+          availableVenues={availableVenues}
+          packageEquipment={packageEquipment.length > 0 ? packageEquipment : EQUIPMENT_SHOWCASE}
         />;
-      case 5:
-        return <Step5DateAndContact
-          nextStep={() => setStep(6)}
-          prevStep={() => setStep(4)}
+      case 3:
+        return <Step3ChooseDate
+          nextStep={() => setStep(4)}
+          prevStep={() => setStep(2)}
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
                   bookedDates={bookedDates}
                   details={details}
                   setDetails={setDetails}
                 />;
-      case 6:
-        return <Step6Downpayment
-          nextStep={() => setStep(7)}
-          prevStep={() => setStep(5)}
+      case 4:
+        return <Step4Downpayment
+          nextStep={() => setStep(5)}
+          prevStep={() => setStep(3)}
           email={details.email}
         />;
-      case 7:
-        return <Step7Confirmation email={details.email} />;
+      case 5:
+        return <Step5Confirmation email={details.email} />;
       default:
         return null;
     }
@@ -150,13 +126,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
           {/* Progress indicator */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-primaryRed">Step {step} of 7</span>
-              <span className="text-xs text-darkGray">{Math.round((step / 7) * 100)}% Complete</span>
+              <span className="text-sm font-semibold text-primaryRed">Step {step} of 5</span>
+              <span className="text-xs text-darkGray">{Math.round((step / 5) * 100)}% Complete</span>
             </div>
             <div className="w-full bg-lightGray rounded-full h-2">
               <div 
-                className="bg-primaryRed h-2 rounded-full transition-all duration-150"
-                style={{ width: `${(step / 7) * 100}%` }}
+                className="bg-primaryRed h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(step / 5) * 100}%` }}
               ></div>
             </div>
           </div>
@@ -168,27 +144,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
   );
 };
 
-// Step 1: Select Event Type - Memoized for performance
-const Step1SelectEvent = memo<{
+// Step 1: Select Event Type
+const Step1SelectEvent: React.FC<{
   nextStep: () => void;
   selectedEventType: string;
   onSelectEventType: (type: string) => void;
-}>(({ nextStep, selectedEventType, onSelectEventType }) => {
-  const handleSelect = useCallback((type: string) => {
-    onSelectEventType(type);
-  }, [onSelectEventType]);
-
+}> = ({ nextStep, selectedEventType, onSelectEventType }) => {
   return (
     <div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Select Your Event Type</h2>
+      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Select Event</h2>
       <p className="text-darkGray mb-8">Choose the type of event you're planning</p>
       
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         {EVENT_TYPES.map((event) => (
           <button
             key={event.name}
-            onClick={() => handleSelect(event.name)}
-            className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-150 transform hover:scale-105 ${
+            onClick={() => onSelectEventType(event.name)}
+            className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
               selectedEventType === event.name
                 ? 'border-primaryRed shadow-lg shadow-primaryRed/20'
                 : 'border-mediumGray/50 hover:border-primaryRed/50'
@@ -198,11 +170,9 @@ const Step1SelectEvent = memo<{
               <img 
                 src={event.image} 
                 alt={event.name}
-                loading="eager"
-                decoding="async"
-                className="w-full h-full object-cover brightness-75 group-hover:brightness-100 transition-all duration-150"
+                className="w-full h-full object-cover brightness-75 group-hover:brightness-100 transition-all duration-300"
               />
-              <div className={`absolute inset-0 transition-all duration-150 ${
+              <div className={`absolute inset-0 transition-all duration-300 ${
                 selectedEventType === event.name ? 'bg-primaryRed/20' : 'bg-black/40'
               }`}></div>
               <div className="absolute inset-0 flex items-center justify-center">
@@ -225,39 +195,41 @@ const Step1SelectEvent = memo<{
       <button
         onClick={nextStep}
         disabled={!selectedEventType}
-        className="w-full bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-150 disabled:bg-mediumGray disabled:cursor-not-allowed text-lg"
+        className="w-full bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-300 disabled:bg-mediumGray disabled:cursor-not-allowed text-lg"
       >
         Next: Choose Package
         <ArrowRightIcon className="w-5 h-5 inline-block ml-2" />
       </button>
     </div>
   );
-});
-Step1SelectEvent.displayName = 'Step1SelectEvent';
+};
 
-// Step 2: Select Package (with venues shown) - Memoized for performance
-const Step2SelectPackage = memo<{
+// Step 2: Choose Package (with venues and equipment shown)
+const Step2ChoosePackage: React.FC<{
   nextStep: () => void;
   prevStep: () => void;
   selectedPackage: string;
   onSelectPackage: (pkg: string) => void;
   packages: typeof PACKAGES;
-}>(({ nextStep, prevStep, selectedPackage, onSelectPackage, packages }) => {
-  const handleSelect = useCallback((pkgName: string) => {
-    onSelectPackage(pkgName);
-  }, [onSelectPackage]);
-
+  selectedVenues: string[];
+  onToggleVenue: (venueId: string) => void;
+  availableVenues: Venue[];
+  packageEquipment: typeof EQUIPMENT_SHOWCASE;
+}> = ({ nextStep, prevStep, selectedPackage, onSelectPackage, packages, selectedVenues, onToggleVenue, availableVenues, packageEquipment }) => {
+  const selectedPkg = packages.find(p => p.name === selectedPackage);
+  
   return (
     <div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Choose Your Package</h2>
-      <p className="text-darkGray mb-8">Select a package and see available venues</p>
+      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Choose Package</h2>
+      <p className="text-darkGray mb-6">Select a package and see available venues and equipment</p>
 
-      <div className="space-y-4 mb-8 max-h-[60vh] overflow-y-auto pr-2">
+      {/* Package Selection */}
+      <div className="space-y-4 mb-8">
         {packages.map((pkg) => (
           <div
             key={pkg.name}
-            onClick={() => handleSelect(pkg.name)}
-            className={`border-2 rounded-xl p-4 cursor-pointer transition-all duration-150 ${
+            onClick={() => onSelectPackage(pkg.name)}
+            className={`border-2 rounded-xl p-4 cursor-pointer transition-all duration-300 ${
               selectedPackage === pkg.name
                 ? 'border-primaryRed bg-primaryRed/5 shadow-lg'
                 : 'border-mediumGray/50 hover:border-primaryRed/50'
@@ -268,8 +240,6 @@ const Step2SelectPackage = memo<{
                 <img 
                   src={pkg.image} 
                   alt={pkg.name}
-                  loading="lazy"
-                  decoding="async"
                   className="w-full h-24 object-cover rounded-lg"
                 />
               </div>
@@ -283,34 +253,87 @@ const Step2SelectPackage = memo<{
                   )}
                 </div>
                 <p className="text-darkGray text-sm mb-2">{pkg.description}</p>
-                <p className="text-primaryRed font-bold mb-3">{pkg.priceRange}</p>
-                
-                {/* Show venues for this package */}
-                {pkg.venues && pkg.venues.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-semibold text-darkGray mb-2">Available Venues:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {pkg.venues.map((venue) => (
-                        <span 
-                          key={venue.id}
-                          className="text-xs bg-lightGray px-2 py-1 rounded text-darkGray"
-                        >
-                          {venue.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <p className="text-primaryRed font-bold">{pkg.priceRange}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Show Venues and Equipment when package is selected */}
+      {selectedPackage && selectedPkg && (
+        <div className="space-y-6 mb-8 max-h-[50vh] overflow-y-auto pr-2">
+          {/* Available Venues */}
+          {availableVenues.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-black mb-4">Available Venues - Select Your Preferred</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableVenues.map((venue) => (
+                  <div
+                    key={venue.id}
+                    onClick={() => onToggleVenue(venue.id)}
+                    className={`border-2 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+                      selectedVenues.includes(venue.id)
+                        ? 'border-primaryRed shadow-lg shadow-primaryRed/20'
+                        : 'border-mediumGray/50 hover:border-primaryRed/50'
+                    }`}
+                  >
+                    <div className="aspect-video relative">
+                      <img 
+                        src={venue.image} 
+                        alt={venue.name}
+                        className="w-full h-full object-cover"
+                      />
+                      {selectedVenues.includes(venue.id) && (
+                        <div className="absolute top-2 right-2">
+                          <CheckCircleIcon className="w-6 h-6 text-primaryRed bg-white rounded-full" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h4 className="text-base font-bold text-black">{venue.name}</h4>
+                      <p className="text-xs text-darkGray">{venue.location}</p>
+                      <p className="text-xs text-primaryRed mt-1">{venue.capacity}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Equipment Showcase */}
+          {packageEquipment.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-black mb-4">Equipment Included</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {packageEquipment.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border-2 border-mediumGray/50 rounded-xl overflow-hidden hover:border-primaryRed/50 transition-all duration-300"
+                  >
+                    <div className="aspect-video relative">
+                      <img 
+                        src={item.image} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <span className="text-xs font-semibold text-primaryRed uppercase">{item.category}</span>
+                      <h4 className="text-sm font-bold text-black mt-1">{item.name}</h4>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex gap-4">
         <button
           onClick={prevStep}
-          className="flex-1 bg-white border-2 border-primaryRed text-primaryRed font-bold py-4 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-150"
+          className="flex-1 bg-white border-2 border-primaryRed text-primaryRed font-bold py-4 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-300"
         >
           <ArrowLeftIcon className="w-5 h-5 inline-block mr-2" />
           Back
@@ -318,171 +341,18 @@ const Step2SelectPackage = memo<{
         <button
           onClick={nextStep}
           disabled={!selectedPackage}
-          className="flex-1 bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-150 disabled:bg-mediumGray disabled:cursor-not-allowed"
+          className="flex-1 bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-300 disabled:bg-mediumGray disabled:cursor-not-allowed"
         >
-          Next: View Equipment
+          Next: Choose Date
           <ArrowRightIcon className="w-5 h-5 inline-block ml-2" />
         </button>
       </div>
     </div>
   );
-});
-Step2SelectPackage.displayName = 'Step2SelectPackage';
+};
 
-// Step 3: Equipment Showcase - Memoized for performance
-const Step3EquipmentShowcase = memo<{
-  nextStep: () => void;
-  prevStep: () => void;
-  equipment: typeof EQUIPMENT_SHOWCASE;
-}>(({ nextStep, prevStep, equipment }) => {
-  return (
-    <div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Equipment Showcase</h2>
-      <p className="text-darkGray mb-8">See the professional equipment included in your package</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-h-[60vh] overflow-y-auto pr-2">
-        {equipment.map((item) => (
-          <div
-            key={item.id}
-            className="border-2 border-mediumGray/50 rounded-xl overflow-hidden hover:border-primaryRed/50 transition-all duration-150"
-          >
-            <div className="aspect-video relative">
-              <img 
-                src={item.image} 
-                alt={item.name}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="p-4">
-              <span className="text-xs font-semibold text-primaryRed uppercase">{item.category}</span>
-              <h3 className="text-lg font-bold text-black mt-1">{item.name}</h3>
-              <p className="text-sm text-darkGray mt-1">{item.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-4">
-        <button
-          onClick={prevStep}
-          className="flex-1 bg-white border-2 border-primaryRed text-primaryRed font-bold py-4 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-150"
-        >
-          <ArrowLeftIcon className="w-5 h-5 inline-block mr-2" />
-          Back
-        </button>
-        <button
-          onClick={nextStep}
-          className="flex-1 bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-150"
-        >
-          Next: Select Venues
-          <ArrowRightIcon className="w-5 h-5 inline-block ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-});
-Step3EquipmentShowcase.displayName = 'Step3EquipmentShowcase';
-
-// Step 4: Select Venues - Memoized for performance
-const Step4SelectVenues = memo<{
-  nextStep: () => void;
-  prevStep: () => void;
-  venues: Venue[];
-  selectedVenues: string[];
-  onToggleVenue: (venueId: string) => void;
-}>(({ nextStep, prevStep, venues, selectedVenues, onToggleVenue }) => {
-  if (venues.length === 0) {
-    return (
-      <div>
-        <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Select Venues</h2>
-        <p className="text-darkGray mb-8">No venues available for this package. You can proceed to booking.</p>
-        <div className="flex gap-4">
-          <button
-            onClick={prevStep}
-            className="flex-1 bg-white border-2 border-primaryRed text-primaryRed font-bold py-4 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-300"
-          >
-            <ArrowLeftIcon className="w-5 h-5 inline-block mr-2" />
-            Back
-          </button>
-          <button
-            onClick={nextStep}
-            className="flex-1 bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-300"
-          >
-            Next: Date & Contact
-            <ArrowRightIcon className="w-5 h-5 inline-block ml-2" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Select Your Venues</h2>
-      <p className="text-darkGray mb-8">Choose one or more venues for your event</p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-h-[60vh] overflow-y-auto pr-2">
-        {venues.map((venue) => (
-          <div
-            key={venue.id}
-            onClick={() => onToggleVenue(venue.id)}
-            className={`border-2 rounded-xl overflow-hidden cursor-pointer transition-all duration-150 transform hover:scale-105 ${
-              selectedVenues.includes(venue.id)
-                ? 'border-primaryRed shadow-lg shadow-primaryRed/20'
-                : 'border-mediumGray/50 hover:border-primaryRed/50'
-            }`}
-          >
-            <div className="aspect-video relative">
-              <img 
-                src={venue.image} 
-                alt={venue.name}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover"
-              />
-              {selectedVenues.includes(venue.id) && (
-                <div className="absolute top-2 right-2">
-                  <CheckCircleIcon className="w-6 h-6 text-primaryRed bg-white rounded-full" />
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-black">{venue.name}</h3>
-              <p className="text-sm text-darkGray">{venue.location}</p>
-              <p className="text-xs text-primaryRed mt-1">{venue.capacity}</p>
-              {venue.description && (
-                <p className="text-xs text-darkGray mt-2">{venue.description}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-4">
-        <button
-          onClick={prevStep}
-          className="flex-1 bg-white border-2 border-primaryRed text-primaryRed font-bold py-4 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-150"
-        >
-          <ArrowLeftIcon className="w-5 h-5 inline-block mr-2" />
-          Back
-        </button>
-        <button
-          onClick={nextStep}
-          className="flex-1 bg-primaryRed text-white font-bold py-4 px-6 rounded-full hover:bg-opacity-90 transition-all duration-150"
-        >
-          Next: Date & Contact
-          <ArrowRightIcon className="w-5 h-5 inline-block ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-});
-Step4SelectVenues.displayName = 'Step4SelectVenues';
-
-// Step 5: Date and Contact Info
-const Step5DateAndContact: React.FC<{
+// Step 3: Choose Date
+const Step3ChooseDate: React.FC<{
     nextStep: () => void;
   prevStep: () => void;
     selectedDate: Date | null;
@@ -506,8 +376,8 @@ const Step5DateAndContact: React.FC<{
     
     return (
         <div>
-      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Event Details & Contact</h2>
-      <p className="text-darkGray mb-8">Provide your event date and contact information</p>
+      <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Choose Date</h2>
+      <p className="text-darkGray mb-8">Select your event date and provide your contact information</p>
 
       <div className="space-y-4 mb-8 max-h-[60vh] overflow-y-auto pr-2">
                 <div>
@@ -590,14 +460,14 @@ const Step5DateAndContact: React.FC<{
     );
 };
 
-// Step 6: Downpayment
-const Step6Downpayment: React.FC<{
+// Step 4: Downpayment
+const Step4Downpayment: React.FC<{
   nextStep: () => void;
   prevStep: () => void;
   email: string;
 }> = ({ nextStep, prevStep, email }) => (
   <div>
-    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Secure Your Booking</h2>
+    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Downpayment</h2>
     <p className="text-darkGray mb-8">Complete your reservation with a downpayment</p>
     
     <div className="bg-gradient-to-br from-primaryRed/10 to-lightGray rounded-2xl p-6 sm:p-8 mb-8 border-2 border-primaryRed/20">
@@ -651,11 +521,11 @@ const Step6Downpayment: React.FC<{
   </div>
 );
 
-// Step 7: Confirmation
-const Step7Confirmation: React.FC<{ email: string }> = ({ email }) => (
+// Step 5: Confirmation
+const Step5Confirmation: React.FC<{ email: string }> = ({ email }) => (
     <div className="text-center py-8">
         <CheckCircleIcon className="w-20 h-20 text-primaryRed mx-auto mb-4" />
-    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Booking Submitted!</h2>
+    <h2 className="text-3xl sm:text-4xl font-serif font-bold text-black mb-2">Confirmation</h2>
     <p className="text-darkGray mb-4">
       Thank you! We've sent a preliminary confirmation to <strong className="text-black">{email}</strong>.
     </p>

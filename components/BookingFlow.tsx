@@ -5,7 +5,7 @@ interface BookingFlowProps {
   onBookNowClick: () => void;
 }
 
-const steps = ['Select Event', 'Choose Package', 'Choose Date', 'Downpayment', 'Confirmation'];
+const steps = ['Select Event', 'Choose Package', 'Choose Date', 'Down payment', 'For Confirmation'];
 
 export const BookingFlow: React.FC<BookingFlowProps> = ({ onBookNowClick }) => {
   return (

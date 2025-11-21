@@ -13,11 +13,10 @@ export const SERVICES: Service[] = [
 
 export const EVENT_TYPES: EventType[] = [
   { name: 'Weddings', image: '/photos/Wedding/Tagaytay/Wedding 1/569190349_1398533622272571_6387164445008568536_n.jpg' },
-  { name: 'Corporate', image: '/photos/Wedding/Tagaytay/Wedding 1/571343221_1398540378938562_4804558161343445364_n.jpg' },
+  { name: 'Corporate', image: '/photos/Corporate/DIY.jpg' },
   { name: 'Kiddie Parties', image: '/photos/Kiddie/565710449_1392539449538655_6346928700467358881_n.jpg' },
   { name: 'Debuts', image: '/photos/Wedding/Tagaytay/Wedding 2/567240387_1395347349257865_8244837411615044519_n.jpg' },
   { name: 'Festivals', image: '/photos/Wedding/Tagaytay/Wedding 1/571175692_1398540528938547_5239243637261797162_n.jpg' },
-  { name: 'Live Bands', image: '/photos/Wedding/Tagaytay/Wedding 2/570250651_1395348172591116_5351188878399276855_n.jpg' },
 ];
 
 // Sample venues data
@@ -118,7 +117,7 @@ export const PACKAGES: Package[] = [
     description: 'Professional AV setup for seamless presentations and conferences.',
     priceRange: '₱30,000 - ₱70,000',
     inclusions: ['Large LED Wall', 'Podium Microphones', 'Stage Lighting', 'Live Feed Camera'],
-    image: '/photos/Wedding/Tagaytay/Wedding 1/571175692_1398540528938547_5239243637261797162_n.jpg',
+    image: '/photos/Corporate/DIY.jpg',
     venues: [SAMPLE_VENUES[1], SAMPLE_VENUES[2]],
     equipment: [EQUIPMENT_SHOWCASE[0], EQUIPMENT_SHOWCASE[1], EQUIPMENT_SHOWCASE[2]],
   },
