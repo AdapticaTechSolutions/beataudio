@@ -3,7 +3,7 @@
 // DELETE /api/bookings/[id] - Delete booking
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBookingById, updateBooking, deleteBooking } from '../../lib/api/storage';
+import { getBookingById, updateBooking, deleteBooking } from '../../lib/api/storage.js';
 
 export default async function handler(
   req: VercelRequest,

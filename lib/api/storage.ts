@@ -2,7 +2,7 @@
 // ✅ Supabase is enabled and tested successfully!
 
 // Export all functions from Supabase storage implementation
-export * from './supabase-storage';
+export * from './supabase-storage.js';
 
 // Note: In-memory storage has been replaced with Supabase
 // All bookings are now persisted in PostgreSQL database

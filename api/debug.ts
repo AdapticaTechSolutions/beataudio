@@ -3,7 +3,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { getUserByUsername } from '../lib/api/storage';
+import { getUserByUsername } from '../lib/api/storage.js';
 
 export default async function handler(
   req: VercelRequest,

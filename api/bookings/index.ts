@@ -2,7 +2,7 @@
 // POST /api/bookings - Create a new booking
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBookings, createBooking } from '../../lib/api/storage';
+import { getBookings, createBooking } from '../../lib/api/storage.js';
 
 export default async function handler(
   req: VercelRequest,
