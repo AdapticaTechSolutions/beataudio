@@ -256,22 +256,49 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   try {
     const trimmedUsername = username.trim();
     
-    // First, try to get the user without .single() to see if there are any results
-    // This helps debug if the issue is with .single() or the query itself
-    const { data: allData, error: listError } = await supabase
-      .from('users')
-      .select('id, username, email, role, password_hash, created_at, last_login')
-      .eq('username', trimmedUsername)
-      .limit(2);
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      throw new Error('Database not configured');
+    }
+    
+    // Use a simpler query approach - select all columns and filter
+    // Avoid using .single() which can cause UUID validation issues
+    // Use RPC or direct query to bypass potential RLS issues
+    let allData: any[] | null = null;
+    let listError: any = null;
+    
+    try {
+      const result = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', trimmedUsername)
+        .limit(1);
+      
+      allData = result.data;
+      listError = result.error;
+    } catch (queryError: any) {
+      console.error('Query execution error:', queryError);
+      listError = queryError;
+    }
     
     if (listError) {
-      console.error('Error listing users:', {
+      console.error('Error fetching user from database:', {
         username: trimmedUsername,
         error: listError.message,
         code: listError.code,
         details: listError.details,
         hint: listError.hint,
+        fullError: JSON.stringify(listError, null, 2),
       });
+      
+      // Provide more specific error messages
+      if (listError.message?.includes('pattern') || listError.message?.includes('expected')) {
+        throw new Error('Database schema error: Invalid UUID format in users table. Please check your database.');
+      }
+      if (listError.code === '42501') {
+        throw new Error('Row Level Security (RLS) is blocking access. Ensure SERVICE_ROLE_KEY is set.');
+      }
+      
       throw new Error(listError.message || 'Database error fetching user');
     }
     
@@ -279,11 +306,6 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     if (!allData || allData.length === 0) {
       console.log(`User not found: ${trimmedUsername}`);
       return null;
-    }
-    
-    // If multiple users found (shouldn't happen due to unique constraint), log warning
-    if (allData.length > 1) {
-      console.warn(`Multiple users found with username: ${trimmedUsername}`);
     }
     
     // Use the first result
