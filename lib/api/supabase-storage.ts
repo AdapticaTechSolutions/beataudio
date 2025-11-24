@@ -137,18 +137,23 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   }
 
   try {
+    // Use limit(1) instead of single() to avoid UUID validation issues
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('id', id)
-      .single();
+      .limit(1);
 
     if (error) {
       console.error('Error fetching booking:', error);
       return null;
     }
 
-    return data ? mapRowToBooking(data) : null;
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return mapRowToBooking(data[0]);
   } catch (error) {
     console.error('Error fetching booking:', error);
     return null;
@@ -174,11 +179,12 @@ export async function createBooking(
     Object.entries(bookingRow).filter(([_, v]) => v !== undefined)
   );
 
+  // Use limit(1) instead of single() to avoid UUID validation issues
   const { data, error } = await supabase
     .from('bookings')
     .insert(cleanBookingRow)
     .select()
-    .single();
+    .limit(1);
 
   if (error) {
     console.error('Error creating booking:', {
@@ -198,11 +204,11 @@ export async function createBooking(
     throw errorWithDetails;
   }
 
-  if (!data) {
+  if (!data || data.length === 0) {
     throw new Error('No data returned from Supabase insert');
   }
 
-  return mapRowToBooking(data);
+  return mapRowToBooking(data[0]);
 }
 
 // Update a booking
