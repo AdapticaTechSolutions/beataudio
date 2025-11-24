@@ -58,10 +58,17 @@ export default async function handler(
       .eq('username', 'admin')
       .single();
 
-    // Test 3: Check table structure
-    const { data: tableInfo, error: tableError } = await supabase
-      .rpc('get_table_info', { table_name: 'users' })
-      .catch(() => ({ data: null, error: { message: 'RPC not available' } }));
+    // Test 3: Check table structure (skip if RPC not available)
+    let tableInfo = null;
+    let tableError = null;
+    try {
+      const result = await supabase.rpc('get_table_info', { table_name: 'users' });
+      tableInfo = result.data;
+      tableError = result.error;
+    } catch (e) {
+      // RPC function doesn't exist - that's okay
+      tableError = { message: 'RPC function not available' };
+    }
 
     res.status(200).json({
       success: true,
