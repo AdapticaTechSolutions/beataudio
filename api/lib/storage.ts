@@ -5,7 +5,7 @@
 import type { Booking, User } from '../../types';
 
 // Switch to Supabase by uncommenting these lines:
-// export * from './supabase-storage';
+ export * from './supabase-storage';
 // Then comment out the in-memory storage below
 
 // In-memory storage for serverless functions
