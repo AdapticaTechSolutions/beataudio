@@ -36,6 +36,8 @@ export default async function handler(
       startsWith: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10) || 'N/A',
       isAnonKey: process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('sb_publishable_') || false,
       isJWT: process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('eyJ') || false,
+      isSecretFormat: process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('sb_secret_') || false,
+      isTooShort: (process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0) < 100,
     },
     
     // Client-side variables (with VITE_ prefix)
@@ -89,10 +91,12 @@ export default async function handler(
   };
 
   // Determine if setup is correct
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const isCorrect = 
     !!process.env.SUPABASE_URL && 
     !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ');
+    key.startsWith('eyJ') &&
+    key.length > 100;
 
   const issues: string[] = [];
   
@@ -106,11 +110,21 @@ export default async function handler(
       issues.push('⚠️ Code will fallback to VITE_SUPABASE_ANON_KEY (may cause RLS issues)');
     }
   } else {
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY.startsWith('sb_publishable_')) {
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (key.startsWith('sb_publishable_')) {
       issues.push('❌ SUPABASE_SERVICE_ROLE_KEY appears to be anon key (starts with sb_publishable_)');
     }
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY.startsWith('eyJ')) {
+    if (key.startsWith('sb_secret_')) {
+      issues.push('❌ SUPABASE_SERVICE_ROLE_KEY starts with sb_secret_ - This is NOT the service_role key!');
+      issues.push('   → Go to Supabase Dashboard → Settings → API → Find "service_role" key');
+      issues.push('   → It should start with "eyJ" and be very long (hundreds of characters)');
+    }
+    if (!key.startsWith('eyJ')) {
       issues.push('⚠️ SUPABASE_SERVICE_ROLE_KEY should start with eyJ (JWT format)');
+    }
+    if (key.length < 100) {
+      issues.push(`⚠️ SUPABASE_SERVICE_ROLE_KEY is too short (${key.length} chars). Service role key should be 200+ characters.`);
+      issues.push('   → You may have copied the wrong key from Supabase dashboard');
     }
   }
 
@@ -124,6 +138,12 @@ export default async function handler(
       !process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Add SUPABASE_SERVICE_ROLE_KEY (without VITE_ prefix) in Vercel' : null,
       process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('sb_publishable_') 
         ? 'Replace SUPABASE_SERVICE_ROLE_KEY with service_role key from Supabase (starts with eyJ)' 
+        : null,
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.startsWith('sb_secret_')
+        ? '❌ CRITICAL: Replace SUPABASE_SERVICE_ROLE_KEY - You have the wrong key! Go to Supabase Dashboard → Settings → API → Copy the "service_role" key (starts with eyJ, very long)'
+        : null,
+      (process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY.length < 100)
+        ? '❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is too short. Get the full service_role key from Supabase Dashboard → Settings → API'
         : null,
       !process.env.VITE_SUPABASE_URL ? 'Add VITE_SUPABASE_URL (with VITE_ prefix) for client-side' : null,
       !process.env.VITE_SUPABASE_ANON_KEY ? 'Add VITE_SUPABASE_ANON_KEY (with VITE_ prefix) for client-side' : null,
