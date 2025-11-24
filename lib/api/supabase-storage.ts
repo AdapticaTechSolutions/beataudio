@@ -5,11 +5,21 @@ import { createClient } from '@supabase/supabase-js';
 import type { Booking, User } from '../../types';
 
 // Initialize Supabase client
-// Use service_role key for server-side operations (full access)
+// Use service_role key for server-side operations (full access, bypasses RLS)
 // Use anon key for client-side operations (respects RLS policies)
 // Note: In Vercel serverless functions, use process.env directly (not VITE_ prefix)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Log which key is being used (for debugging)
+if (process.env.VERCEL_ENV === 'development' || process.env.NODE_ENV === 'development') {
+  console.log('Supabase config:', {
+    hasUrl: !!supabaseUrl,
+    hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    hasAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
+    usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+}
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('Supabase credentials not found. Check environment variables:', {

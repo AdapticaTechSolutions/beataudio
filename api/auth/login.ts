@@ -51,7 +51,9 @@ export default async function handler(
     // Get user from database
     let user;
     try {
+      console.log('Attempting to fetch user:', trimmedUsername);
       user = await getUserByUsername(trimmedUsername);
+      console.log('User fetch result:', user ? 'Found' : 'Not found', user ? { id: user.id, username: user.username } : null);
     } catch (dbError: any) {
       console.error('Database error fetching user:', {
         error: dbError.message,
@@ -59,21 +61,28 @@ export default async function handler(
         username: trimmedUsername,
         errorName: dbError.name,
         errorCode: dbError.code,
+        fullError: JSON.stringify(dbError, Object.getOwnPropertyNames(dbError)),
       });
       
       // Return more helpful error messages
       const errorMessage = dbError.message || 'Database error';
       const isPatternError = errorMessage.includes('pattern') || errorMessage.includes('expected');
+      const isRLSError = errorMessage.includes('row-level security') || errorMessage.includes('RLS') || dbError.code === '42501';
       
       res.status(500).json({ 
         success: false, 
         error: isPatternError 
-          ? 'Database configuration error. Please check that users table has valid UUID IDs.'
+          ? 'Database query error. Please disable RLS on users table: ALTER TABLE users DISABLE ROW LEVEL SECURITY;'
+          : isRLSError
+          ? 'Row Level Security is blocking access. Run: ALTER TABLE users DISABLE ROW LEVEL SECURITY;'
           : errorMessage,
         details: process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development' 
           ? {
               message: dbError.message,
-              hint: 'This error usually means the users table has invalid UUID format or missing columns. Check Supabase dashboard.',
+              code: dbError.code,
+              hint: isPatternError || isRLSError
+                ? 'Go to Supabase Dashboard → SQL Editor → Run: ALTER TABLE users DISABLE ROW LEVEL SECURITY;'
+                : 'Check Supabase dashboard and Vercel function logs for more details.',
             }
           : undefined
       });
