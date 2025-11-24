@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.84.0",
+    "@vercel/edge-config": "^1.4.3",
+    "@vercel/node": "^2.3.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

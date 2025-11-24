@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { XIcon, CheckCircleIcon, LoadingSpinnerIcon, FacebookIcon, ArrowRightIcon, LightIcon, SoundIcon, LedWallIcon, ProjectorIcon, SmokeIcon, SaveIcon, TrashIcon, HistoryIcon, DownloadIcon, ClockIcon } from './icons';
-import { BOOKINGS, EVENT_TYPES } from '../constants';
+import { EVENT_TYPES } from '../constants';
 import { Logo } from './Logo';
+import { bookingsApi } from '../lib/api';
 
 interface BookingModalProps {
   onClose: () => void;
@@ -94,10 +95,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
     additionalNotes: ''
   });
 
-  // Calculate booked dates
-  const bookedDates = BOOKINGS
-    .filter(b => b.status === 'Confirmed')
-    .map(b => b.eventDate);
+  // Fetch booked dates from API
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const fetchBookedDates = async () => {
+      try {
+        const response = await bookingsApi.getAll();
+        if (response.success && response.data) {
+          const confirmedDates = response.data
+            .filter((b: any) => b.status === 'Confirmed')
+            .map((b: any) => b.eventDate);
+          setBookedDates(confirmedDates);
+        }
+      } catch (error) {
+        console.error('Error fetching booked dates:', error);
+      }
+    };
+    fetchBookedDates();
+  }, []);
 
   // Check for draft on mount
   useEffect(() => {
@@ -733,9 +749,54 @@ const Step4_Submission: React.FC<{
         window.open(`https://m.me/sherwinsabater?text=${encodeURIComponent(text)}`, '_blank');
     };
     
-    const handleSubmit = () => {
-        setIsSubmitted(true);
-        localStorage.removeItem('beat_audio_booking_draft'); // clear draft
+    const handleSubmit = async () => {
+        try {
+            // Prepare booking data for API
+            const bookingData = {
+                customerName: details.fullName,
+                contactNumber: details.celNumber,
+                email: details.email,
+                eventDate: details.eventDate?.toISOString().split('T')[0] || '',
+                eventType: details.eventType,
+                venue: details.venueAddress,
+                ceremonyVenue: details.ceremonyAddress || undefined,
+                guestCount: parseInt(details.guestCount) || 0,
+                services: [
+                    ...(details.serviceLights ? ['Lights'] : []),
+                    ...(details.serviceSounds ? ['Sounds'] : []),
+                    ...(details.serviceLedWall ? ['LED Wall'] : []),
+                    ...(details.serviceProjector ? ['Projector'] : []),
+                    ...(details.serviceSmoke ? ['Smoke FX'] : []),
+                    ...(details.hasBand ? ['Live Band'] : []),
+                ],
+                bandRider: details.bandRider || undefined,
+                fullName: details.fullName,
+                celNumber: details.celNumber,
+                venueAddress: details.venueAddress,
+                weddingSetup: details.weddingSetup,
+                serviceLights: details.serviceLights,
+                serviceSounds: details.serviceSounds,
+                serviceLedWall: details.serviceLedWall,
+                serviceProjector: details.serviceProjector,
+                serviceSmoke: details.serviceSmoke,
+                hasBand: details.hasBand,
+                additionalNotes: details.additionalNotes || undefined,
+            };
+
+            // Save to database
+            const response = await bookingsApi.create(bookingData);
+            
+            if (response.success) {
+                setIsSubmitted(true);
+                localStorage.removeItem('beat_audio_booking_draft'); // clear draft
+            } else {
+                alert('Failed to save booking. Please try again.');
+                console.error('Booking save error:', response.error);
+            }
+        } catch (error) {
+            console.error('Error submitting booking:', error);
+            alert('An error occurred. Please try again.');
+        }
     };
 
     if (isSubmitted) {

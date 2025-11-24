@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authApi } from '../../lib/api';
 
 interface AdminLoginProps {
   onLoginSuccess: () => void;
@@ -8,16 +9,28 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // NOTE: This is a mock login for demonstration purposes only.
-    // In a real application, use a secure authentication method.
-    if (username === 'admin' && password === 'password') {
-      setError('');
-      onLoginSuccess();
-    } else {
-      setError('Invalid username or password.');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login(username, password);
+      
+      if (response.success && response.data) {
+        // Store user info in localStorage
+        localStorage.setItem('admin_user', JSON.stringify(response.data.user));
+        setError('');
+        onLoginSuccess();
+      } else {
+        setError(response.error || 'Invalid username or password.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,10 +62,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           {error && <p className="text-sm text-red-500 text-center">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-primaryRed text-white font-bold py-3 px-6 rounded-full hover:bg-opacity-90 transition-all duration-300"
+            disabled={isLoading}
+            className="w-full bg-primaryRed text-white font-bold py-3 px-6 rounded-full hover:bg-opacity-90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
+          <div className="text-xs text-darkGray/60 text-center mt-2">
+            <p>Demo credentials:</p>
+            <p>Username: <strong>admin</strong> | Password: <strong>password</strong></p>
+          </div>
         </form>
          <div className="text-center text-darkGray text-sm">
             <a href="#" className="hover:text-primaryRed">&larr; Back to Main Site</a>

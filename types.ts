@@ -40,4 +40,34 @@ export interface Booking {
   bandRider?: string;
   totalAmount?: number; // Set by admin
   status: 'Inquiry' | 'QuoteSent' | 'Confirmed' | 'Cancelled';
+  createdAt?: string;
+  updatedAt?: string;
+  fullName?: string; // From booking form
+  celNumber?: string; // From booking form
+  venueAddress?: string; // From booking form
+  weddingSetup?: string; // From booking form
+  serviceLights?: boolean;
+  serviceSounds?: boolean;
+  serviceLedWall?: boolean;
+  serviceProjector?: boolean;
+  serviceSmoke?: boolean;
+  hasBand?: boolean;
+  additionalNotes?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'staff' | 'viewer';
+  passwordHash: string; // In production, use proper hashing
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  token?: string;
+  user?: Omit<User, 'passwordHash'>;
+  error?: string;
 }
