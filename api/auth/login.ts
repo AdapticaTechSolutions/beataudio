@@ -1,7 +1,7 @@
 // API route: POST /api/auth/login - Authenticate user
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserByUsername } from '../lib/storage';
+import { getUserByUsername } from '../../lib/api/storage';
 
 // Simple password comparison (in production, use bcrypt)
 function comparePassword(password: string, hash: string): boolean {
