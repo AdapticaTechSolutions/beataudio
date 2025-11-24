@@ -20,31 +20,19 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Check if import succeeded
-  if (!getUserByUsername) {
-    console.error('getUserByUsername function not available');
-    res.status(500).json({
-      success: false,
-      error: 'Server configuration error',
-      details: 'Failed to load user lookup function',
-    });
-    return;
-  }
-
   // Wrap everything in try-catch to prevent function crashes
   try {
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+    if (req.method !== 'POST') {
+      res.status(405).json({ success: false, error: 'Method not allowed' });
+      return;
+    }
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ success: false, error: 'Method not allowed' });
-    return;
-  }
-
-  try {
+    try {
     const { username, password } = req.body;
 
     // Validate input
@@ -172,32 +160,33 @@ export default async function handler(
       console.warn('User ID is not a valid UUID format:', userResponse.id);
     }
 
-    res.status(200).json({
-      success: true,
-      token,
-      user: userResponse,
-    });
-  } catch (error: any) {
-    console.error('Login error:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-    });
-    
-    // Return detailed error in development, generic in production
-    const errorResponse: any = {
-      success: false,
-      error: error.message || 'Login failed',
-    };
+      res.status(200).json({
+        success: true,
+        token,
+        user: userResponse,
+      });
+    } catch (error: any) {
+      console.error('Login error:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code,
+      });
+      
+      // Return detailed error in development, generic in production
+      const errorResponse: any = {
+        success: false,
+        error: error.message || 'Login failed',
+      };
 
-    if (process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development') {
-      errorResponse.details = error.stack;
-      errorResponse.errorCode = error.code;
-      errorResponse.errorName = error.name;
+      if (process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development') {
+        errorResponse.details = error.stack;
+        errorResponse.errorCode = error.code;
+        errorResponse.errorName = error.name;
+      }
+
+      res.status(500).json(errorResponse);
     }
-
-    res.status(500).json(errorResponse);
   } catch (outerError: any) {
     // Catch any unhandled errors to prevent function crash
     console.error('Unhandled error in login handler:', {
