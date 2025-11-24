@@ -95,17 +95,52 @@ export const bookingsApi = {
 export const authApi = {
   login: async (username: string, password: string) => {
     try {
-      const response = await apiRequest<{ token: string; user: any }>('/auth/login', {
+      const url = `${API_BASE_URL}/auth/login`;
+      console.log('Login request:', { url, username, API_BASE_URL });
+      
+      const response = await fetch(url, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ username, password }),
       });
 
-      if (response.success && response.data?.token) {
-        setAuthToken(response.data.token);
+      console.log('Login response status:', response.status, response.statusText);
+      
+      const data = await response.json();
+      console.log('Login response data:', data);
+
+      if (!response.ok) {
+        console.error('Login failed - response not ok:', data);
+        return {
+          success: false,
+          error: data.error || 'Login failed',
+          data: undefined,
+        };
       }
 
-      return response;
+      // API returns { success: true, token, user } directly
+      if (data.success && data.token) {
+        console.log('Login successful, setting token');
+        setAuthToken(data.token);
+        return {
+          success: true,
+          data: {
+            token: data.token,
+            user: data.user,
+          },
+        };
+      }
+
+      console.error('Login failed - unexpected response structure:', data);
+      return {
+        success: false,
+        error: data.error || 'Login failed - unexpected response',
+        data: undefined,
+      };
     } catch (error: any) {
+      console.error('Login error:', error);
       // Handle network errors or parsing errors
       return {
         success: false,

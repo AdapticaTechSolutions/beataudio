@@ -17,17 +17,22 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login with:', { username });
       const response = await authApi.login(username, password);
+      console.log('Login response:', response);
       
       if (response.success && response.data) {
+        console.log('Login successful, storing user data');
         // Store user info in localStorage
         localStorage.setItem('admin_user', JSON.stringify(response.data.user));
         setError('');
         onLoginSuccess();
       } else {
+        console.error('Login failed:', response.error);
         setError(response.error || 'Invalid username or password.');
       }
     } catch (err: any) {
+      console.error('Login exception:', err);
       // Provide more helpful error messages
       const errorMessage = err.message || 'Login failed. Please try again.';
       if (errorMessage.includes('pattern')) {
