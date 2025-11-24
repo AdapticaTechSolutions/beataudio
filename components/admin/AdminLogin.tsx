@@ -28,7 +28,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
         setError(response.error || 'Invalid username or password.');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      // Provide more helpful error messages
+      const errorMessage = err.message || 'Login failed. Please try again.';
+      if (errorMessage.includes('pattern')) {
+        setError('Database configuration error. Please contact administrator.');
+      } else if (errorMessage.includes('Database error')) {
+        setError('Unable to connect to database. Please check configuration.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

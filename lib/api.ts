@@ -94,16 +94,25 @@ export const bookingsApi = {
 // Auth API
 export const authApi = {
   login: async (username: string, password: string) => {
-    const response = await apiRequest<{ token: string; user: any }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const response = await apiRequest<{ token: string; user: any }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (response.success && response.data?.token) {
-      setAuthToken(response.data.token);
+      if (response.success && response.data?.token) {
+        setAuthToken(response.data.token);
+      }
+
+      return response;
+    } catch (error: any) {
+      // Handle network errors or parsing errors
+      return {
+        success: false,
+        error: error.message || 'Login request failed',
+        data: undefined,
+      };
     }
-
-    return response;
   },
 
   logout: () => {

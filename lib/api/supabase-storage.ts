@@ -256,32 +256,40 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   try {
     const trimmedUsername = username.trim();
     
-    // Select all columns including password_hash
-    const { data, error } = await supabase
+    // First, try to get the user without .single() to see if there are any results
+    // This helps debug if the issue is with .single() or the query itself
+    const { data: allData, error: listError } = await supabase
       .from('users')
       .select('id, username, email, role, password_hash, created_at, last_login')
       .eq('username', trimmedUsername)
-      .single();
-
-    if (error) {
-      // PGRST116 means no rows found - this is expected if user doesn't exist
-      if (error.code === 'PGRST116') {
-        console.log(`User not found: ${trimmedUsername}`);
-        return null;
-      }
-      console.error('Error fetching user:', {
+      .limit(2);
+    
+    if (listError) {
+      console.error('Error listing users:', {
         username: trimmedUsername,
-        error: error.message,
-        code: error.code,
-        details: error.details,
+        error: listError.message,
+        code: listError.code,
+        details: listError.details,
+        hint: listError.hint,
       });
+      throw new Error(listError.message || 'Database error fetching user');
+    }
+    
+    // If no users found, return null
+    if (!allData || allData.length === 0) {
+      console.log(`User not found: ${trimmedUsername}`);
       return null;
     }
+    
+    // If multiple users found (shouldn't happen due to unique constraint), log warning
+    if (allData.length > 1) {
+      console.warn(`Multiple users found with username: ${trimmedUsername}`);
+    }
+    
+    // Use the first result
+    const data = allData[0];
 
-    if (!data) {
-      console.log(`No data returned for user: ${trimmedUsername}`);
-      return null;
-    }
+    // Data is already extracted above, no need to check error here
 
     // Validate and convert data
     try {
@@ -351,8 +359,11 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       username,
       error: error.message,
       stack: error.stack,
+      errorName: error.name,
+      errorCode: error.code,
     });
-    return null;
+    // Re-throw the error so it can be properly handled upstream
+    throw error;
   }
 }
 

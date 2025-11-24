@@ -63,22 +63,40 @@ export default async function handler(
       }
 
       case 'login': {
-        // Test user lookup
+        // Test user lookup with detailed error reporting
         const username = (req.query.username as string) || 'admin';
-        const user = await getUserByUsername(username);
-        res.status(200).json({
-          success: !!user,
-          type: 'login',
-          username,
-          userFound: !!user,
-          user: user ? {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            hasPassword: !!user.passwordHash,
-          } : null,
-        });
+        try {
+          const user = await getUserByUsername(username);
+          res.status(200).json({
+            success: !!user,
+            type: 'login',
+            username,
+            userFound: !!user,
+            user: user ? {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              role: user.role,
+              hasPassword: !!user.passwordHash,
+              idType: typeof user.id,
+              idLength: user.id?.length,
+            } : null,
+          });
+        } catch (error: any) {
+          res.status(200).json({
+            success: false,
+            type: 'login',
+            username,
+            userFound: false,
+            error: error.message,
+            errorCode: error.code,
+            errorDetails: error.details,
+            hint: error.hint,
+            suggestion: error.message?.includes('pattern') 
+              ? 'The users table may have invalid UUID format. Check Supabase dashboard.'
+              : 'Check that users table exists and has correct schema.',
+          });
+        }
         break;
       }
 

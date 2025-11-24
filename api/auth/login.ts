@@ -57,11 +57,25 @@ export default async function handler(
         error: dbError.message,
         stack: dbError.stack,
         username: trimmedUsername,
+        errorName: dbError.name,
+        errorCode: dbError.code,
       });
+      
+      // Return more helpful error messages
+      const errorMessage = dbError.message || 'Database error';
+      const isPatternError = errorMessage.includes('pattern') || errorMessage.includes('expected');
+      
       res.status(500).json({ 
         success: false, 
-        error: 'Database error',
-        details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+        error: isPatternError 
+          ? 'Database configuration error. Please check that users table has valid UUID IDs.'
+          : errorMessage,
+        details: process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development' 
+          ? {
+              message: dbError.message,
+              hint: 'This error usually means the users table has invalid UUID format or missing columns. Check Supabase dashboard.',
+            }
+          : undefined
       });
       return;
     }
