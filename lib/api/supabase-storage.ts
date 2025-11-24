@@ -1,43 +1,77 @@
 // Supabase storage implementation
 // This replaces the in-memory storage with Supabase PostgreSQL database
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Booking, User } from '../../types';
 
-// Initialize Supabase client
-// Use service_role key for server-side operations (full access, bypasses RLS)
-// Use anon key for client-side operations (respects RLS policies)
-// Note: In Vercel serverless functions, use process.env directly (not VITE_ prefix)
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+// Lazy initialization pattern for Vercel serverless functions
+// CRITICAL: Never throw errors at module level - this causes FUNCTION_INVOCATION_FAILED
+// Instead, initialize the client lazily when functions are called
 
-// Always log config in serverless functions for debugging
-console.log('Supabase initialization:', {
-  hasUrl: !!supabaseUrl,
-  urlLength: supabaseUrl?.length || 0,
-  hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  serviceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
-  serviceRoleKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10) || 'none',
-  hasAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
-  usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  env: process.env.VERCEL_ENV || process.env.NODE_ENV,
-});
+let supabaseClient: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseKey) {
-  const errorMsg = 'Supabase credentials not found. Check environment variables:';
-  console.error(errorMsg, {
-    SUPABASE_URL: !!process.env.SUPABASE_URL,
-    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
-    allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
-  });
-  throw new Error(`${errorMsg} SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set`);
+/**
+ * Get or initialize the Supabase client lazily
+ * This prevents module-level errors that crash serverless functions
+ */
+function getSupabaseClient(): SupabaseClient {
+  // If already initialized, return cached client
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  // Get credentials from environment variables
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+
+  // Log config for debugging (but don't throw - let functions handle errors)
+  if (process.env.VERCEL_ENV || process.env.NODE_ENV === 'development') {
+    console.log('Supabase initialization:', {
+      hasUrl: !!supabaseUrl,
+      urlLength: supabaseUrl?.length || 0,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+      serviceRoleKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10) || 'none',
+      hasAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
+      usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      env: process.env.VERCEL_ENV || process.env.NODE_ENV,
+    });
+  }
+
+  // Validate credentials
+  if (!supabaseUrl || !supabaseKey) {
+    const errorMsg = 'Supabase credentials not found. Check environment variables:';
+    console.error(errorMsg, {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
+    });
+    // Throw here - but only when function is called, not at module load
+    // This allows API routes to catch and return proper HTTP errors
+    throw new Error(`${errorMsg} SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set`);
+  }
+
+  // Create and cache the client
+  // Wrap in try-catch to handle invalid credentials gracefully
+  try {
+    supabaseClient = createClient(supabaseUrl, supabaseKey);
+    return supabaseClient;
+  } catch (error: any) {
+    console.error('Failed to create Supabase client:', error);
+    throw new Error(`Failed to initialize Supabase client: ${error.message || 'Invalid credentials'}`);
+  }
 }
 
-const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
+/**
+ * Check if Supabase is configured without throwing
+ */
+function isSupabaseConfigured(): boolean {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  return !!(supabaseUrl && supabaseKey);
+}
 
 // Helper to generate booking ID
 function generateBookingId(): string {
@@ -112,12 +146,13 @@ function mapBookingToRow(booking: Partial<Booking>): any {
 
 // Get all bookings
 export async function getBookings(): Promise<Booking[]> {
-  if (!supabase) {
-    // Fallback to in-memory storage
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured - returning empty bookings array');
     return [];
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
@@ -137,11 +172,13 @@ export async function getBookings(): Promise<Booking[]> {
 
 // Get a single booking by ID
 export async function getBookingById(id: string): Promise<Booking | null> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured - cannot fetch booking');
     return null;
   }
 
   try {
+    const supabase = getSupabaseClient();
     // Use limit(1) instead of single() to avoid UUID validation issues
     const { data, error } = await supabase
       .from('bookings')
@@ -169,51 +206,60 @@ export async function getBookingById(id: string): Promise<Booking | null> {
 export async function createBooking(
   booking: Omit<Booking, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Booking> {
-  if (!supabase) {
-    throw new Error('Supabase not configured');
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
   }
 
-  const bookingId = generateBookingId();
-  const bookingRow = mapBookingToRow({
-    ...booking,
-    id: bookingId,
-  });
-
-  // Remove undefined values to avoid Supabase errors
-  const cleanBookingRow = Object.fromEntries(
-    Object.entries(bookingRow).filter(([_, v]) => v !== undefined)
-  );
-
-  // Use limit(1) instead of single() to avoid UUID validation issues
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert(cleanBookingRow)
-    .select()
-    .limit(1);
-
-  if (error) {
-    console.error('Error creating booking:', {
-      error,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
-      bookingRow: cleanBookingRow
+  try {
+    const supabase = getSupabaseClient();
+    const bookingId = generateBookingId();
+    const bookingRow = mapBookingToRow({
+      ...booking,
+      id: bookingId,
     });
-    // Create a more descriptive error
-    const errorMessage = error.message || 'Failed to create booking';
-    const errorWithDetails = new Error(errorMessage);
-    (errorWithDetails as any).details = error.details;
-    (errorWithDetails as any).hint = error.hint;
-    (errorWithDetails as any).code = error.code;
-    throw errorWithDetails;
-  }
 
-  if (!data || data.length === 0) {
-    throw new Error('No data returned from Supabase insert');
-  }
+    // Remove undefined values to avoid Supabase errors
+    const cleanBookingRow = Object.fromEntries(
+      Object.entries(bookingRow).filter(([_, v]) => v !== undefined)
+    );
 
-  return mapRowToBooking(data[0]);
+    // Use limit(1) instead of single() to avoid UUID validation issues
+    const { data, error } = await supabase
+      .from('bookings')
+      .insert(cleanBookingRow)
+      .select()
+      .limit(1);
+
+    if (error) {
+      console.error('Error creating booking:', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        bookingRow: cleanBookingRow
+      });
+      // Create a more descriptive error
+      const errorMessage = error.message || 'Failed to create booking';
+      const errorWithDetails = new Error(errorMessage);
+      (errorWithDetails as any).details = error.details;
+      (errorWithDetails as any).hint = error.hint;
+      (errorWithDetails as any).code = error.code;
+      throw errorWithDetails;
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('No data returned from Supabase insert');
+    }
+
+    return mapRowToBooking(data[0]);
+  } catch (error: any) {
+    // Re-throw configuration errors with helpful message
+    if (error.message?.includes('credentials not found') || error.message?.includes('must be set')) {
+      throw new Error('Supabase not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables in Vercel dashboard.');
+    }
+    throw error;
+  }
 }
 
 // Update a booking
@@ -221,50 +267,64 @@ export async function updateBooking(
   id: string,
   updates: Partial<Booking>
 ): Promise<Booking | null> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured - cannot update booking');
     return null;
   }
 
-  const updateRow = mapBookingToRow(updates);
-  delete updateRow.id; // Don't update the ID
+  try {
+    const supabase = getSupabaseClient();
+    const updateRow = mapBookingToRow(updates);
+    delete updateRow.id; // Don't update the ID
 
-  // Use limit(1) instead of single() to avoid UUID validation issues
-  const { data, error } = await supabase
-    .from('bookings')
-    .update(updateRow)
-    .eq('id', id)
-    .select()
-    .limit(1);
+    // Use limit(1) instead of single() to avoid UUID validation issues
+    const { data, error } = await supabase
+      .from('bookings')
+      .update(updateRow)
+      .eq('id', id)
+      .select()
+      .limit(1);
 
-  if (error) {
+    if (error) {
+      console.error('Error updating booking:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return mapRowToBooking(data[0]);
+  } catch (error) {
     console.error('Error updating booking:', error);
     return null;
   }
-
-  if (!data || data.length === 0) {
-    return null;
-  }
-
-  return mapRowToBooking(data[0]);
 }
 
 // Delete a booking
 export async function deleteBooking(id: string): Promise<boolean> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured - cannot delete booking');
     return false;
   }
 
-  const { error } = await supabase
-    .from('bookings')
-    .delete()
-    .eq('id', id);
+  try {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
+    if (error) {
+      console.error('Error deleting booking:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
     console.error('Error deleting booking:', error);
     return false;
   }
-
-  return true;
 }
 
 // Get user by username
@@ -275,13 +335,14 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     return null;
   }
 
-  // Check Supabase client
-  if (!supabase) {
-    console.error('Supabase client not initialized - cannot fetch user');
+  // Check if Supabase is configured
+  if (!isSupabaseConfigured()) {
+    console.error('Supabase not configured - cannot fetch user');
     throw new Error('Database not configured. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
   }
 
   try {
+    const supabase = getSupabaseClient();
     const trimmedUsername = username.trim();
     
     // Use a simpler query approach - select all columns and filter
@@ -429,11 +490,13 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 
 // Get all users (without passwords)
 export async function getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured - returning empty users array');
     return [];
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('users')
       .select('id, username, email, role, created_at, last_login');
@@ -457,6 +520,15 @@ export async function getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
   }
 }
 
-// Export Supabase client for advanced usage
-export { supabase };
+// Export Supabase client getter for advanced usage (lazy initialization)
+export function getSupabase(): SupabaseClient | null {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+  try {
+    return getSupabaseClient();
+  } catch {
+    return null;
+  }
+}
 
