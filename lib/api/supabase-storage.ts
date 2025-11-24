@@ -253,23 +253,20 @@ export async function deleteBooking(id: string): Promise<boolean> {
 
 // Get user by username
 export async function getUserByUsername(username: string): Promise<User | null> {
-  if (!supabase) {
-    console.warn('Supabase not configured - cannot fetch user');
-    return null;
-  }
-
+  // Validate input first
   if (!username || typeof username !== 'string' || username.trim() === '') {
     console.warn('Invalid username provided');
     return null;
   }
 
+  // Check Supabase client
+  if (!supabase) {
+    console.error('Supabase client not initialized - cannot fetch user');
+    throw new Error('Database not configured. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  }
+
   try {
     const trimmedUsername = username.trim();
-    
-    if (!supabase) {
-      console.error('Supabase client not initialized');
-      throw new Error('Database not configured');
-    }
     
     // Use a simpler query approach - select all columns and filter
     // Avoid using .single() which can cause UUID validation issues

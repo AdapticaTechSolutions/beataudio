@@ -20,6 +20,9 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Wrap everything in try-catch to prevent function crashes
+  try {
+
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -184,6 +187,21 @@ export default async function handler(
     }
 
     res.status(500).json(errorResponse);
+  } catch (outerError: any) {
+    // Catch any unhandled errors to prevent function crash
+    console.error('Unhandled error in login handler:', {
+      message: outerError.message,
+      stack: outerError.stack,
+      name: outerError.name,
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development'
+        ? outerError.message
+        : undefined,
+    });
   }
 }
 
