@@ -28,6 +28,10 @@ export default async function handler(
     }
   } else if (req.method === 'POST') {
     try {
+      console.log('Creating booking, environment check:', {
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      });
       const bookingData = req.body;
       
       // Validate required fields
@@ -45,7 +49,14 @@ export default async function handler(
       });
       res.status(201).json({ success: true, data: newBooking });
     } catch (error: any) {
-      console.error('Error creating booking:', error);
+      console.error('Error creating booking:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
       // Return more detailed error information
       const errorMessage = error.message || 'Failed to create booking';
       const errorDetails = error.details || error.hint || '';
@@ -53,7 +64,12 @@ export default async function handler(
         success: false, 
         error: errorMessage,
         details: errorDetails,
-        code: error.code
+        code: error.code,
+        // Include more info in development
+        ...(process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development' ? {
+          stack: error.stack,
+          fullError: error.toString(),
+        } : {}),
       });
     }
   } else {

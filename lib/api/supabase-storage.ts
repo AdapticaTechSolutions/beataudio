@@ -11,23 +11,28 @@ import type { Booking, User } from '../../types';
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Log which key is being used (for debugging)
-if (process.env.VERCEL_ENV === 'development' || process.env.NODE_ENV === 'development') {
-  console.log('Supabase config:', {
-    hasUrl: !!supabaseUrl,
-    hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    hasAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
-    usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  });
-}
+// Always log config in serverless functions for debugging
+console.log('Supabase initialization:', {
+  hasUrl: !!supabaseUrl,
+  urlLength: supabaseUrl?.length || 0,
+  hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  serviceRoleKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+  serviceRoleKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10) || 'none',
+  hasAnonKey: !!process.env.VITE_SUPABASE_ANON_KEY,
+  usingServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+  env: process.env.VERCEL_ENV || process.env.NODE_ENV,
+});
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found. Check environment variables:', {
+  const errorMsg = 'Supabase credentials not found. Check environment variables:';
+  console.error(errorMsg, {
     SUPABASE_URL: !!process.env.SUPABASE_URL,
     VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
     VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
+    allEnvKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
   });
+  throw new Error(`${errorMsg} SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set`);
 }
 
 const supabase = supabaseUrl && supabaseKey 

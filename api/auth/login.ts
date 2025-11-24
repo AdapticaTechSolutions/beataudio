@@ -54,6 +54,10 @@ export default async function handler(
     let user;
     try {
       console.log('Attempting to fetch user:', trimmedUsername);
+      console.log('Environment check:', {
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      });
       user = await getUserByUsername(trimmedUsername);
       console.log('User fetch result:', user ? 'Found' : 'Not found', user ? { id: user.id, username: user.username } : null);
     } catch (dbError: any) {
