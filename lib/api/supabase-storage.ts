@@ -278,6 +278,7 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     let listError: any = null;
     
     try {
+      // Try the query with explicit error handling
       const result = await supabase
         .from('users')
         .select('*')
@@ -286,8 +287,22 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       
       allData = result.data;
       listError = result.error;
+      
+      // Log the result for debugging
+      if (process.env.VERCEL_ENV === 'development' || process.env.NODE_ENV === 'development') {
+        console.log('Query result:', {
+          hasData: !!allData,
+          dataLength: allData?.length || 0,
+          hasError: !!listError,
+          errorMessage: listError?.message,
+        });
+      }
     } catch (queryError: any) {
-      console.error('Query execution error:', queryError);
+      console.error('Query execution error:', {
+        message: queryError.message,
+        stack: queryError.stack,
+        name: queryError.name,
+      });
       listError = queryError;
     }
     
