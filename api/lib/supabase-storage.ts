@@ -282,15 +282,38 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       return null;
     }
 
-    return {
-      id: data.id,
-      username: data.username,
-      email: data.email,
-      role: data.role,
-      passwordHash: data.password_hash,
-      createdAt: data.created_at,
-      lastLogin: data.last_login,
-    };
+    // Validate and convert data
+    try {
+      // Ensure ID is a string (UUIDs from Supabase should be strings)
+      const userId = typeof data.id === 'string' ? data.id : String(data.id);
+      
+      // Validate UUID format if it's supposed to be a UUID
+      if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+        console.warn(`User ID is not a valid UUID: ${userId}`);
+      }
+
+      // Validate role is one of the allowed values
+      const validRoles = ['admin', 'staff', 'viewer'] as const;
+      const userRole = validRoles.includes(data.role as any) 
+        ? (data.role as 'admin' | 'staff' | 'viewer')
+        : 'staff';
+
+      return {
+        id: userId,
+        username: String(data.username || ''),
+        email: String(data.email || ''),
+        role: userRole,
+        passwordHash: String(data.password_hash || ''),
+        createdAt: data.created_at ? String(data.created_at) : new Date().toISOString(),
+        lastLogin: data.last_login ? String(data.last_login) : undefined,
+      };
+    } catch (parseError: any) {
+      console.error('Error parsing user data:', {
+        error: parseError.message,
+        data: data,
+      });
+      return null;
+    }
   } catch (error: any) {
     console.error('Error fetching user:', {
       username,

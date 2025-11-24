@@ -49,10 +49,32 @@ export default async function handler(
     const trimmedPassword = password.trim();
 
     // Get user from database
-    const user = await getUserByUsername(trimmedUsername);
+    let user;
+    try {
+      user = await getUserByUsername(trimmedUsername);
+    } catch (dbError: any) {
+      console.error('Database error fetching user:', dbError);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Database error',
+        details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+      });
+      return;
+    }
 
     if (!user) {
       res.status(401).json({ success: false, error: 'Invalid username or password' });
+      return;
+    }
+
+    // Validate user data structure
+    if (!user.id || !user.username || !user.passwordHash) {
+      console.error('Invalid user data structure:', user);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Invalid user data',
+        details: 'User record is missing required fields'
+      });
       return;
     }
 
@@ -66,15 +88,30 @@ export default async function handler(
     const token = Buffer.from(`${trimmedUsername}:${Date.now()}`).toString('base64');
 
     // Return user data (without password)
-    const { passwordHash, ...userWithoutPassword } = user;
+    // Ensure all fields are properly formatted and typed
+    const validRoles = ['admin', 'staff', 'viewer'] as const;
+    const userRole = validRoles.includes(user.role as any) 
+      ? (user.role as 'admin' | 'staff' | 'viewer')
+      : 'staff';
+
+    const userResponse = {
+      id: String(user.id || ''),
+      username: String(user.username || ''),
+      email: String(user.email || ''),
+      role: userRole,
+      createdAt: user.createdAt || new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+    };
+
+    // Validate UUID format if it's supposed to be UUID
+    if (userResponse.id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userResponse.id)) {
+      console.warn('User ID is not a valid UUID format:', userResponse.id);
+    }
 
     res.status(200).json({
       success: true,
       token,
-      user: {
-        ...userWithoutPassword,
-        lastLogin: new Date().toISOString(),
-      },
+      user: userResponse,
     });
   } catch (error: any) {
     console.error('Login error:', error);
