@@ -7,11 +7,17 @@ import type { Booking, User } from '../../types';
 // Initialize Supabase client
 // Use service_role key for server-side operations (full access)
 // Use anon key for client-side operations (respects RLS policies)
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+// Note: In Vercel serverless functions, use process.env directly (not VITE_ prefix)
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase credentials not found. Using in-memory storage.');
+  console.warn('Supabase credentials not found. Check environment variables:', {
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    VITE_SUPABASE_URL: !!process.env.VITE_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    VITE_SUPABASE_ANON_KEY: !!process.env.VITE_SUPABASE_ANON_KEY,
+  });
 }
 
 const supabase = supabaseUrl && supabaseKey 
@@ -153,15 +159,37 @@ export async function createBooking(
     id: bookingId,
   });
 
+  // Remove undefined values to avoid Supabase errors
+  const cleanBookingRow = Object.fromEntries(
+    Object.entries(bookingRow).filter(([_, v]) => v !== undefined)
+  );
+
   const { data, error } = await supabase
     .from('bookings')
-    .insert(bookingRow)
+    .insert(cleanBookingRow)
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating booking:', error);
-    throw error;
+    console.error('Error creating booking:', {
+      error,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      bookingRow: cleanBookingRow
+    });
+    // Create a more descriptive error
+    const errorMessage = error.message || 'Failed to create booking';
+    const errorWithDetails = new Error(errorMessage);
+    (errorWithDetails as any).details = error.details;
+    (errorWithDetails as any).hint = error.hint;
+    (errorWithDetails as any).code = error.code;
+    throw errorWithDetails;
+  }
+
+  if (!data) {
+    throw new Error('No data returned from Supabase insert');
   }
 
   return mapRowToBooking(data);
@@ -216,22 +244,43 @@ export async function deleteBooking(id: string): Promise<boolean> {
 // Get user by username
 export async function getUserByUsername(username: string): Promise<User | null> {
   if (!supabase) {
+    console.warn('Supabase not configured - cannot fetch user');
+    return null;
+  }
+
+  if (!username || typeof username !== 'string' || username.trim() === '') {
+    console.warn('Invalid username provided');
     return null;
   }
 
   try {
+    const trimmedUsername = username.trim();
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('username', username)
+      .eq('username', trimmedUsername)
       .single();
 
     if (error) {
-      console.error('Error fetching user:', error);
+      // PGRST116 means no rows found - this is expected if user doesn't exist
+      if (error.code === 'PGRST116') {
+        console.log(`User not found: ${trimmedUsername}`);
+        return null;
+      }
+      console.error('Error fetching user:', {
+        username: trimmedUsername,
+        error: error.message,
+        code: error.code,
+        details: error.details,
+      });
       return null;
     }
 
-    if (!data) return null;
+    if (!data) {
+      console.log(`No data returned for user: ${trimmedUsername}`);
+      return null;
+    }
 
     return {
       id: data.id,
@@ -242,8 +291,12 @@ export async function getUserByUsername(username: string): Promise<User | null> 
       createdAt: data.created_at,
       lastLogin: data.last_login,
     };
-  } catch (error) {
-    console.error('Error fetching user:', error);
+  } catch (error: any) {
+    console.error('Error fetching user:', {
+      username,
+      error: error.message,
+      stack: error.stack,
+    });
     return null;
   }
 }

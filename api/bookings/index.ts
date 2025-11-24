@@ -29,13 +29,32 @@ export default async function handler(
   } else if (req.method === 'POST') {
     try {
       const bookingData = req.body;
+      
+      // Validate required fields
+      if (!bookingData.email || !bookingData.eventDate || !bookingData.eventType) {
+        res.status(400).json({ 
+          success: false, 
+          error: 'Missing required fields: email, eventDate, and eventType are required' 
+        });
+        return;
+      }
+      
       const newBooking = await createBooking({
         ...bookingData,
         status: 'Inquiry',
       });
       res.status(201).json({ success: true, data: newBooking });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Error creating booking:', error);
+      // Return more detailed error information
+      const errorMessage = error.message || 'Failed to create booking';
+      const errorDetails = error.details || error.hint || '';
+      res.status(500).json({ 
+        success: false, 
+        error: errorMessage,
+        details: errorDetails,
+        code: error.code
+      });
     }
   } else {
     res.status(405).json({ success: false, error: 'Method not allowed' });

@@ -786,16 +786,24 @@ const Step4_Submission: React.FC<{
             // Save to database
             const response = await bookingsApi.create(bookingData);
             
-            if (response.success) {
+            if (response.success && response.data) {
                 setIsSubmitted(true);
                 localStorage.removeItem('beat_audio_booking_draft'); // clear draft
+                console.log('Booking saved successfully:', response.data);
             } else {
-                alert('Failed to save booking. Please try again.');
-                console.error('Booking save error:', response.error);
+                const errorMsg = response.error || 'Failed to save booking';
+                const details = (response as any).details || '';
+                console.error('Booking save error:', {
+                    error: errorMsg,
+                    details: details,
+                    code: (response as any).code,
+                    fullResponse: response
+                });
+                alert(`Failed to save booking: ${errorMsg}${details ? '\n\n' + details : ''}`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting booking:', error);
-            alert('An error occurred. Please try again.');
+            alert(`An error occurred: ${error.message || 'Please try again.'}`);
         }
     };
 
