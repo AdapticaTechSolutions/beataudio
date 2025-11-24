@@ -1,19 +1,7 @@
 // API route: POST /api/auth/login - Authenticate user
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-// Import with error handling
-let getUserByUsername: any;
-try {
-  const storage = require('../../lib/api/storage');
-  getUserByUsername = storage.getUserByUsername;
-  if (!getUserByUsername) {
-    throw new Error('getUserByUsername not exported from storage');
-  }
-} catch (importError: any) {
-  console.error('Failed to import getUserByUsername:', importError);
-  // Will handle in handler
-}
+import { getUserByUsername } from '../../lib/api/storage';
 
 // Simple password comparison (in production, use bcrypt)
 function comparePassword(password: string, hash: string): boolean {
