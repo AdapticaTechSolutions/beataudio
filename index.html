@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF--8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beat Audio & Lights</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primaryRed: '#D92626',
+            white: '#FFFFFF',
+            lightGray: '#F9FAFB',
+            mediumGray: '#E5E7EB',
+            darkGray: '#6B7281',
+            black: '#1F2937',
+            obsidian: '#0f1115',
+            glass: 'rgba(255, 255, 255, 0.05)',
+          },
+          fontFamily: {
+            serif: ['Playfair Display', 'serif'],
+            sans: ['Inter', 'Poppins', 'sans-serif'], // Switched to Inter for UI
+          },
+          boxShadow: {
+            'soft-red': '0 0 25px rgba(217, 38, 38, 0.3)',
+            'glow-red': '0 0 40px rgba(217, 38, 38, 0.6)',
+            'card': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          },
+          animation: {
+            'enter-slide-up': 'enter-slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'exit-slide-down': 'exit-slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'fade-in': 'fade-in 0.3s ease-out forwards',
+            'scale-in': 'scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            'enter-slide-up': {
+              '0%': { opacity: '0', transform: 'translateY(20px) scale(0.98)' },
+              '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+            },
+            'exit-slide-down': {
+              '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+              '100%': { opacity: '0', transform: 'translateY(10px) scale(0.98)' },
+            },
+            'fade-in': {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            'scale-in': {
+              '0%': { opacity: '0', transform: 'scale(0.9)' },
+              '100%': { opacity: '1', transform: 'scale(1)' },
+            },
+          }
+        },
+      },
+    }
+  </script>
+  <style>
+    /* Print Styles for PDF Generation */
+    @media print {
+      body {
+        background-color: white !important;
+        color: black !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      /* Reset layout for print */
+      .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      header, footer, aside { display: none !important; }
+      
+      /* Ensure forced page breaks if needed */
+      .page-break { page-break-before: always; }
+    }
+    
+    .print-only {
+      display: none;
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
