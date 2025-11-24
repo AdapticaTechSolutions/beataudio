@@ -1,7 +1,19 @@
 // API route: POST /api/auth/login - Authenticate user
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getUserByUsername } from '../../lib/api/storage';
+
+// Import with error handling
+let getUserByUsername: any;
+try {
+  const storage = require('../../lib/api/storage');
+  getUserByUsername = storage.getUserByUsername;
+  if (!getUserByUsername) {
+    throw new Error('getUserByUsername not exported from storage');
+  }
+} catch (importError: any) {
+  console.error('Failed to import getUserByUsername:', importError);
+  // Will handle in handler
+}
 
 // Simple password comparison (in production, use bcrypt)
 function comparePassword(password: string, hash: string): boolean {
@@ -19,6 +31,17 @@ export default async function handler(
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Check if import succeeded
+  if (!getUserByUsername) {
+    console.error('getUserByUsername function not available');
+    res.status(500).json({
+      success: false,
+      error: 'Server configuration error',
+      details: 'Failed to load user lookup function',
+    });
+    return;
+  }
 
   // Wrap everything in try-catch to prevent function crashes
   try {
