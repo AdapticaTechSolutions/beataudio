@@ -223,19 +223,24 @@ export async function updateBooking(
   const updateRow = mapBookingToRow(updates);
   delete updateRow.id; // Don't update the ID
 
+  // Use limit(1) instead of single() to avoid UUID validation issues
   const { data, error } = await supabase
     .from('bookings')
     .update(updateRow)
     .eq('id', id)
     .select()
-    .single();
+    .limit(1);
 
   if (error) {
     console.error('Error updating booking:', error);
     return null;
   }
 
-  return data ? mapRowToBooking(data) : null;
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  return mapRowToBooking(data[0]);
 }
 
 // Delete a booking
