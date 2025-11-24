@@ -53,7 +53,11 @@ export default async function handler(
     try {
       user = await getUserByUsername(trimmedUsername);
     } catch (dbError: any) {
-      console.error('Database error fetching user:', dbError);
+      console.error('Database error fetching user:', {
+        error: dbError.message,
+        stack: dbError.stack,
+        username: trimmedUsername,
+      });
       res.status(500).json({ 
         success: false, 
         error: 'Database error',
@@ -63,19 +67,42 @@ export default async function handler(
     }
 
     if (!user) {
-      res.status(401).json({ success: false, error: 'Invalid username or password' });
+      res.status(401).json({ 
+        success: false, 
+        error: 'Invalid username or password',
+        hint: 'User not found. Create users using /api/users/seed or SQL Editor'
+      });
       return;
     }
 
     // Validate user data structure
     if (!user.id || !user.username || !user.passwordHash) {
-      console.error('Invalid user data structure:', user);
+      console.error('Invalid user data structure:', {
+        user,
+        hasId: !!user.id,
+        hasUsername: !!user.username,
+        hasPasswordHash: !!user.passwordHash,
+      });
       res.status(500).json({ 
         success: false, 
         error: 'Invalid user data',
-        details: 'User record is missing required fields'
+        details: 'User record is missing required fields',
+        debug: process.env.NODE_ENV === 'development' ? {
+          hasId: !!user.id,
+          hasUsername: !!user.username,
+          hasPasswordHash: !!user.passwordHash,
+        } : undefined
       });
       return;
+    }
+
+    // Validate UUID format if it's a UUID
+    if (user.id && typeof user.id === 'string') {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(user.id)) {
+        console.warn('User ID is not a valid UUID format:', user.id);
+        // Don't fail - just log it, might be a different ID format
+      }
     }
 
     // Verify password
@@ -114,12 +141,26 @@ export default async function handler(
       user: userResponse,
     });
   } catch (error: any) {
-    console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || 'Login failed',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    console.error('Login error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
     });
+    
+    // Return detailed error in development, generic in production
+    const errorResponse: any = {
+      success: false,
+      error: error.message || 'Login failed',
+    };
+
+    if (process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development') {
+      errorResponse.details = error.stack;
+      errorResponse.errorCode = error.code;
+      errorResponse.errorName = error.name;
+    }
+
+    res.status(500).json(errorResponse);
   }
 }
 

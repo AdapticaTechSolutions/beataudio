@@ -256,9 +256,10 @@ export async function getUserByUsername(username: string): Promise<User | null> 
   try {
     const trimmedUsername = username.trim();
     
+    // Select all columns including password_hash
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, username, email, role, password_hash, created_at, last_login')
       .eq('username', trimmedUsername)
       .single();
 
@@ -285,11 +286,17 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     // Validate and convert data
     try {
       // Ensure ID is a string (UUIDs from Supabase should be strings)
-      const userId = typeof data.id === 'string' ? data.id : String(data.id);
+      let userId: string;
+      if (data.id === null || data.id === undefined) {
+        console.error('User data missing ID field:', data);
+        return null;
+      }
       
-      // Validate UUID format if it's supposed to be a UUID
+      userId = typeof data.id === 'string' ? data.id : String(data.id);
+      
+      // Validate UUID format (but don't fail if it's not UUID - just log)
       if (userId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
-        console.warn(`User ID is not a valid UUID: ${userId}`);
+        console.warn(`User ID is not a valid UUID format: ${userId} (but continuing anyway)`);
       }
 
       // Validate role is one of the allowed values
@@ -298,18 +305,43 @@ export async function getUserByUsername(username: string): Promise<User | null> 
         ? (data.role as 'admin' | 'staff' | 'viewer')
         : 'staff';
 
-      return {
+      // Ensure password_hash exists
+      if (!data.password_hash) {
+        console.warn(`User ${data.username} is missing password_hash`);
+        // Don't fail - return user but log warning
+      }
+
+      // Build user object with all required fields
+      const user: User = {
         id: userId,
         username: String(data.username || ''),
         email: String(data.email || ''),
         role: userRole,
         passwordHash: String(data.password_hash || ''),
-        createdAt: data.created_at ? String(data.created_at) : new Date().toISOString(),
-        lastLogin: data.last_login ? String(data.last_login) : undefined,
+        createdAt: data.created_at 
+          ? (typeof data.created_at === 'string' ? data.created_at : new Date(data.created_at).toISOString())
+          : new Date().toISOString(),
+        lastLogin: data.last_login 
+          ? (typeof data.last_login === 'string' ? data.last_login : new Date(data.last_login).toISOString())
+          : undefined,
       };
+
+      // Final validation
+      if (!user.id || !user.username || !user.email) {
+        console.error('User object missing required fields:', {
+          hasId: !!user.id,
+          hasUsername: !!user.username,
+          hasEmail: !!user.email,
+          user,
+        });
+        return null;
+      }
+
+      return user;
     } catch (parseError: any) {
       console.error('Error parsing user data:', {
         error: parseError.message,
+        stack: parseError.stack,
         data: data,
       });
       return null;
