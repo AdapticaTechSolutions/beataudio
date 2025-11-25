@@ -3,11 +3,11 @@ import { PORTFOLIO_ITEMS } from '../constants';
 
 export const Portfolio: React.FC = () => {
   return (
-    <section id="portfolio" className="py-20 bg-white/95 backdrop-blur-sm">
+    <section id="portfolio" className="py-20 relative z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-black">Our Work in Action</h2>
-          <p className="text-darkGray mt-2">See how we transform ordinary spaces into extraordinary experiences.</p>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-white drop-shadow-lg">Our Work in Action</h2>
+          <p className="text-white/90 mt-2 drop-shadow-md">See how we transform ordinary spaces into extraordinary experiences.</p>
           <div className="mt-4 w-24 h-1 bg-primaryRed mx-auto"></div>
         </div>
         <div className="columns-2 md:columns-3 gap-4">

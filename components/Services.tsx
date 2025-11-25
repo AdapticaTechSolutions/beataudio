@@ -3,11 +3,11 @@ import { SERVICES } from '../constants';
 
 export const Services: React.FC = () => {
   return (
-    <section id="services" className="py-20 bg-white/95 backdrop-blur-sm">
+    <section id="services" className="py-20 relative z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-black">Our Services</h2>
-          <p className="text-darkGray mt-2">Everything you need for a spectacular event.</p>
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-white drop-shadow-lg">Our Services</h2>
+          <p className="text-white/90 mt-2 drop-shadow-md">Everything you need for a spectacular event.</p>
           <div className="mt-4 w-24 h-1 bg-primaryRed mx-auto"></div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
