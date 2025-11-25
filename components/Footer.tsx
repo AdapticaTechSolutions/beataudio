@@ -24,10 +24,10 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="font-bold text-black mb-4">Follow Us</h4>
             <div className="flex justify-center md:justify-start space-x-4">
-              <a href="https://www.facebook.com/beataudiols" className="text-darkGray hover:text-primaryRed"><FacebookIcon /></a>
-              <a href="https://www.instagram.com/beataudiols/" className="text-darkGray hover:text-primaryRed"><InstagramIcon /></a>
+              <a href="https://www.facebook.com/beataudiols" target="_blank" rel="noopener noreferrer" className="text-darkGray hover:text-primaryRed"><FacebookIcon /></a>
+              <a href="https://www.instagram.com/beataudiols/" target="_blank" rel="noopener noreferrer" className="text-darkGray hover:text-primaryRed"><InstagramIcon /></a>
             </div>
-          </div>
+          </div>  
         </div>
         <div className="mt-12 border-t border-mediumGray pt-8 text-center text-darkGray/70 text-sm">
           <p>&copy; {new Date().getFullYear()} Beat Audio & Lights. All Rights Reserved.</p>

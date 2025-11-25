@@ -24,7 +24,7 @@ export const Contact: React.FC = () => {
           <div className="flex flex-col justify-center">
             <h3 className="text-2xl font-serif font-bold mb-4">Live Chat</h3>
             <p className="text-darkGray mb-6">For faster responses, connect with us directly on Facebook Messenger.</p>
-            <a href="https://m.me/your-facebook-page" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-full hover:bg-blue-700 transition-colors duration-300">
+            <a href="https://m.me/beataudiols" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-full hover:bg-blue-700 transition-colors duration-300">
               <FacebookIcon className="w-6 h-6 mr-3" />
               Chat on Messenger
             </a>
