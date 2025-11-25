@@ -7,7 +7,7 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onBookNowClick }) => {
   return (
     <section id="home" className="relative h-screen flex items-center justify-center text-center text-white">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/photos/Wedding/Tagaytay/Wedding 2/573558414_1401393828653217_1075294042907875376_n.jpg')" }}>
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/photos/Wedding/Tagaytay/Wedding 1/569190349_1398533622272571_6387164445008568536_n.jpg')" }}>
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       </div>
       <div className="relative z-10 p-4">
