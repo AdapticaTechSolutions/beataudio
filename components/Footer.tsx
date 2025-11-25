@@ -24,9 +24,8 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="font-bold text-black mb-4">Follow Us</h4>
             <div className="flex justify-center md:justify-start space-x-4">
-              <a href="#" className="text-darkGray hover:text-primaryRed"><FacebookIcon /></a>
-              <a href="#" className="text-darkGray hover:text-primaryRed"><InstagramIcon /></a>
-              <a href="#" className="text-darkGray hover:text-primaryRed"><TwitterIcon /></a>
+              <a href="https://www.facebook.com/beataudiols" className="text-darkGray hover:text-primaryRed"><FacebookIcon /></a>
+              <a href="https://www.instagram.com/beataudiols/" className="text-darkGray hover:text-primaryRed"><InstagramIcon /></a>
             </div>
           </div>
         </div>
