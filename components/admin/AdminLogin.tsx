@@ -48,8 +48,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-lightGray flex items-center justify-center font-sans">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-card">
+    <div className="min-h-screen flex items-center justify-center font-sans relative z-10">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white/95 backdrop-blur-sm rounded-lg shadow-card">
         <h1 className="text-3xl font-serif font-bold text-center text-black">Admin Portal</h1>
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>

@@ -7,9 +7,7 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({ onBookNowClick }) => {
   return (
     <section id="home" className="relative h-screen flex items-center justify-center text-center text-white">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/photos/Wedding/Tagaytay/Wedding 1/569190349_1398533622272571_6387164445008568536_n.jpg')" }}>
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-      </div>
+      {/* Hero content - background is now handled by App.tsx */}
       <div className="relative z-10 p-4">
         <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4 text-shadow-lg">
           Make Every Moment Unforgettable.

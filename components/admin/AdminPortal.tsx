@@ -88,7 +88,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-lightGray font-sans flex relative">
+    <div className="min-h-screen font-sans flex relative">
+      {/* Semi-transparent overlay for better readability */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-0"></div>
       {/* Mobile Overlay */}
       {isMobileSidebarOpen && (
         <div 
@@ -104,12 +106,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
         isOpen={isMobileSidebarOpen}
       />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative z-10">
         <AdminHeader 
             onLogout={onLogout} 
             onMenuClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} 
         />
-        <main className="flex-1 p-4 md:p-10 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-10 overflow-y-auto relative z-10">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">

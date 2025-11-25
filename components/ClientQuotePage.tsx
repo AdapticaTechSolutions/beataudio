@@ -29,8 +29,8 @@ export const ClientQuotePage: React.FC<ClientQuotePageProps> = ({ booking, onPay
 
     if (isPaid) {
         return (
-            <div className="min-h-screen bg-lightGray flex flex-col items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-lg shadow-card text-center max-w-md w-full animate-scale-in">
+            <div className="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
+                <div className="bg-white/95 backdrop-blur-sm p-8 rounded-lg shadow-card text-center max-w-md w-full animate-scale-in">
                     <CheckCircleIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
                     <h1 className="text-3xl font-serif font-bold text-black mb-2">Booking Confirmed!</h1>
                     <p className="text-darkGray mb-6">Thank you, {booking.customerName}. Your date is officially reserved.</p>
@@ -45,10 +45,10 @@ export const ClientQuotePage: React.FC<ClientQuotePageProps> = ({ booking, onPay
     }
 
     return (
-        <div className="min-h-screen bg-lightGray font-sans pb-12">
+        <div className="min-h-screen font-sans pb-12 relative z-10">
             
             {/* SCREEN HEADER - HIDDEN ON PRINT */}
-            <header className="bg-white shadow-sm sticky top-0 z-10 no-print">
+            <header className="bg-white/95 backdrop-blur-sm shadow-sm sticky top-0 z-10 no-print">
                 <div className="container mx-auto px-4 h-20 flex items-center justify-between">
                     <Logo className="h-8 md:h-10 w-auto" />
                     <div className="flex items-center gap-4">

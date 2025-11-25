@@ -104,46 +104,46 @@ const App: React.FC = () => {
 
     // Main Public Site
     return (
-      <div className="relative min-h-screen">
-        {/* Rotating Background Images with Shadow Overlay */}
-        <div className="fixed inset-0 z-0">
-          {backgroundPhotos.map((photo, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed transition-opacity duration-1000 ${
-                index === currentBackgroundIndex ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ backgroundImage: `url('${photo}')` }}
-            >
-              <div className="absolute inset-0 bg-black/70"></div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Content with relative positioning */}
-        <div className="relative z-10">
-          <Header onBookNowClick={handleOpenBookingModal} />
-          <main>
-            <Hero onBookNowClick={handleOpenBookingModal} />
-            <Services />
-            <EventTypes />
-            <BookingFlow onBookNowClick={handleOpenBookingModal} />
-            <Portfolio />
-            <DownpaymentInfo />
-            <Contact />
-          </main>
-          <Footer />
-          <MobileNav onBookNowClick={handleOpenBookingModal} />
-          {isBookingModalOpen && <BookingModal onClose={handleCloseBookingModal} />}
-        </div>
-      </div>
+      <>
+        <Header onBookNowClick={handleOpenBookingModal} />
+        <main>
+          <Hero onBookNowClick={handleOpenBookingModal} />
+          <Services />
+          <EventTypes />
+          <BookingFlow onBookNowClick={handleOpenBookingModal} />
+          <Portfolio />
+          <DownpaymentInfo />
+          <Contact />
+        </main>
+        <Footer />
+        <MobileNav onBookNowClick={handleOpenBookingModal} />
+        {isBookingModalOpen && <BookingModal onClose={handleCloseBookingModal} />}
+      </>
     );
   };
 
 
   return (
-    <div className="text-black font-sans selection:bg-primaryRed selection:text-white">
-      {renderContent()}
+    <div className="text-black font-sans selection:bg-primaryRed selection:text-white min-h-screen">
+      {/* Global Background Image - covers entire page */}
+      <div className="fixed inset-0 z-0">
+        {backgroundPhotos.map((photo, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed transition-opacity duration-1000 ${
+              index === currentBackgroundIndex ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ backgroundImage: `url('${photo}')` }}
+          >
+            <div className="absolute inset-0 bg-black/60"></div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Content wrapper with relative positioning */}
+      <div className="relative z-10 min-h-screen">
+        {renderContent()}
+      </div>
     </div>
   );
 };
