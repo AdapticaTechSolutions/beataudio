@@ -89,8 +89,6 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
 
   return (
     <div className="min-h-screen font-sans flex relative">
-      {/* Semi-transparent overlay for better readability */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-0"></div>
       {/* Mobile Overlay */}
       {isMobileSidebarOpen && (
         <div 
