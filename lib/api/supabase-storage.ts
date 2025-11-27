@@ -144,8 +144,27 @@ function mapBookingToRow(booking: Partial<Booking>): any {
   if (booking.archived !== undefined) row.archived = booking.archived;
   if (booking.archivedAt !== undefined) row.archived_at = booking.archivedAt;
   if (booking.archivedBy !== undefined) row.archived_by = booking.archivedBy;
-  if (booking.lastEditedBy !== undefined) row.last_edited_by = booking.lastEditedBy;
-  if (booking.lastEditedAt !== undefined) row.last_edited_at = booking.lastEditedAt;
+  
+  // Only include audit fields if they exist in the database (check via migration)
+  // These fields may not exist if migration hasn't been run yet
+  // We'll try to include them, but Supabase will ignore if column doesn't exist
+  if (booking.lastEditedBy !== undefined) {
+    try {
+      row.last_edited_by = booking.lastEditedBy;
+    } catch (e) {
+      // Column doesn't exist, skip it
+      console.warn('last_edited_by column not found, skipping');
+    }
+  }
+  if (booking.lastEditedAt !== undefined) {
+    try {
+      row.last_edited_at = booking.lastEditedAt;
+    } catch (e) {
+      // Column doesn't exist, skip it
+      console.warn('last_edited_at column not found, skipping');
+    }
+  }
+  
   if (booking.weddingSetup !== undefined) row.wedding_setup = booking.weddingSetup;
   if (booking.serviceLights !== undefined) row.service_lights = booking.serviceLights;
   if (booking.serviceSounds !== undefined) row.service_sounds = booking.serviceSounds;
@@ -307,8 +326,18 @@ export async function updateBooking(
       Object.entries(updateRow).filter(([_, v]) => v !== undefined && v !== null)
     );
 
+    // Remove audit fields if columns don't exist (graceful degradation)
+    // Check if these columns might not exist and remove them if needed
+    const columnsToSkipIfMissing = ['last_edited_by', 'last_edited_at', 'archived_at', 'archived_by', 'quote_content'];
+    const safeUpdateRow: any = {};
+    
+    for (const [key, value] of Object.entries(cleanUpdateRow)) {
+      // Include all fields - Supabase will error if column doesn't exist, we'll catch it
+      safeUpdateRow[key] = value;
+    }
+
     // Ensure we have something to update
-    if (Object.keys(cleanUpdateRow).length === 0) {
+    if (Object.keys(safeUpdateRow).length === 0) {
       console.warn('No fields to update');
       return existingBooking; // Return existing if nothing to update
     }
@@ -316,26 +345,74 @@ export async function updateBooking(
     // Log for debugging
     console.log('Updating booking:', { 
       id, 
-      updateFields: Object.keys(cleanUpdateRow),
-      updateValues: cleanUpdateRow
+      updateFields: Object.keys(safeUpdateRow),
+      updateValues: safeUpdateRow
     });
 
     // Use limit(1) instead of single() to avoid UUID validation issues
     const { data, error } = await supabase
       .from('bookings')
-      .update(cleanUpdateRow)
+      .update(safeUpdateRow)
       .eq('id', id)
       .select()
       .limit(1);
 
     if (error) {
+      // Check if error is about missing column (common if migration hasn't been run)
+      if (error.message?.includes('column') && (error.message?.includes('not found') || error.message?.includes('schema cache'))) {
+        console.warn('Column not found error detected, retrying without optional audit fields');
+        
+        // Remove potentially missing columns and retry
+        const retryUpdateRow = { ...safeUpdateRow };
+        const optionalColumns = ['last_edited_by', 'last_edited_at', 'archived_at', 'archived_by', 'quote_content'];
+        
+        for (const col of optionalColumns) {
+          if (retryUpdateRow[col] !== undefined) {
+            delete retryUpdateRow[col];
+            console.log(`Removed optional column: ${col}`);
+          }
+        }
+        
+        // Ensure we still have fields to update
+        if (Object.keys(retryUpdateRow).length === 0) {
+          console.warn('No fields remaining after removing optional columns');
+          return existingBooking;
+        }
+        
+        // Retry without optional audit fields
+        const { data: retryData, error: retryError } = await supabase
+          .from('bookings')
+          .update(retryUpdateRow)
+          .eq('id', id)
+          .select()
+          .limit(1);
+        
+        if (retryError) {
+          console.error('Supabase update error (after retry):', {
+            id,
+            error: retryError.message,
+            code: retryError.code,
+            details: retryError.details,
+            hint: retryError.hint
+          });
+          throw new Error(`Failed to update booking: ${retryError.message || 'Unknown error'}. ${retryError.details || ''} ${retryError.hint || ''}`);
+        }
+        
+        if (!retryData || retryData.length === 0) {
+          throw new Error(`Update completed but booking not found: ${id}`);
+        }
+        
+        console.log('Update successful (without optional audit fields)');
+        return mapRowToBooking(retryData[0]);
+      }
+      
       console.error('Supabase update error:', {
         id,
         error: error.message,
         code: error.code,
         details: error.details,
         hint: error.hint,
-        updateRow: cleanUpdateRow
+        updateRow: safeUpdateRow
       });
       throw new Error(`Failed to update booking: ${error.message || 'Unknown error'}. ${error.details || ''} ${error.hint || ''}`);
     }
