@@ -121,39 +121,44 @@ function mapRowToBooking(row: any): Booking {
 
 // Map Booking type to database row
 function mapBookingToRow(booking: Partial<Booking>): any {
-  return {
-    id: booking.id,
-    customer_name: booking.customerName || booking.fullName,
-    contact_number: booking.contactNumber || booking.celNumber,
-    email: booking.email,
-    event_date: booking.eventDate,
-    event_type: booking.eventType,
-    venue: booking.venue || booking.venueAddress,
-    ceremony_venue: booking.ceremonyVenue,
-    guest_count: booking.guestCount,
-    services: booking.services || [],
-    band_rider: booking.bandRider,
-    total_amount: booking.totalAmount,
-    quote_content: booking.quoteContent,
-    status: booking.status || 'Inquiry',
-    archived: booking.archived,
-    archived_at: booking.archivedAt,
-    archived_by: booking.archivedBy,
-    last_edited_by: booking.lastEditedBy,
-    last_edited_at: booking.lastEditedAt,
-    full_name: booking.fullName,
-    cel_number: booking.celNumber,
-    venue_address: booking.venueAddress,
-    wedding_setup: booking.weddingSetup,
-    service_lights: booking.serviceLights,
-    service_sounds: booking.serviceSounds,
-    service_led_wall: booking.serviceLedWall,
-    service_projector: booking.serviceProjector,
-    service_smoke: booking.serviceSmoke,
-    has_band: booking.hasBand,
-    additional_notes: booking.additionalNotes,
-    updated_at: new Date().toISOString(),
-  };
+  const row: any = {};
+  
+  // Only include fields that are actually provided (not undefined)
+  if (booking.id !== undefined) row.id = booking.id;
+  if (booking.customerName !== undefined) row.customer_name = booking.customerName;
+  if (booking.fullName !== undefined) row.full_name = booking.fullName;
+  if (booking.contactNumber !== undefined) row.contact_number = booking.contactNumber;
+  if (booking.celNumber !== undefined) row.cel_number = booking.celNumber;
+  if (booking.email !== undefined) row.email = booking.email;
+  if (booking.eventDate !== undefined) row.event_date = booking.eventDate;
+  if (booking.eventType !== undefined) row.event_type = booking.eventType;
+  if (booking.venue !== undefined) row.venue = booking.venue;
+  if (booking.venueAddress !== undefined) row.venue_address = booking.venueAddress;
+  if (booking.ceremonyVenue !== undefined) row.ceremony_venue = booking.ceremonyVenue;
+  if (booking.guestCount !== undefined) row.guest_count = booking.guestCount;
+  if (booking.services !== undefined) row.services = booking.services;
+  if (booking.bandRider !== undefined) row.band_rider = booking.bandRider;
+  if (booking.totalAmount !== undefined) row.total_amount = booking.totalAmount;
+  if (booking.quoteContent !== undefined) row.quote_content = booking.quoteContent;
+  if (booking.status !== undefined) row.status = booking.status;
+  if (booking.archived !== undefined) row.archived = booking.archived;
+  if (booking.archivedAt !== undefined) row.archived_at = booking.archivedAt;
+  if (booking.archivedBy !== undefined) row.archived_by = booking.archivedBy;
+  if (booking.lastEditedBy !== undefined) row.last_edited_by = booking.lastEditedBy;
+  if (booking.lastEditedAt !== undefined) row.last_edited_at = booking.lastEditedAt;
+  if (booking.weddingSetup !== undefined) row.wedding_setup = booking.weddingSetup;
+  if (booking.serviceLights !== undefined) row.service_lights = booking.serviceLights;
+  if (booking.serviceSounds !== undefined) row.service_sounds = booking.serviceSounds;
+  if (booking.serviceLedWall !== undefined) row.service_led_wall = booking.serviceLedWall;
+  if (booking.serviceProjector !== undefined) row.service_projector = booking.serviceProjector;
+  if (booking.serviceSmoke !== undefined) row.service_smoke = booking.serviceSmoke;
+  if (booking.hasBand !== undefined) row.has_band = booking.hasBand;
+  if (booking.additionalNotes !== undefined) row.additional_notes = booking.additionalNotes;
+  
+  // Always update the updated_at timestamp
+  row.updated_at = new Date().toISOString();
+  
+  return row;
 }
 
 // Get all bookings
@@ -286,30 +291,68 @@ export async function updateBooking(
 
   try {
     const supabase = getSupabaseClient();
+    
+    // First verify the booking exists
+    const existingBooking = await getBookingById(id);
+    if (!existingBooking) {
+      console.error(`Booking not found: ${id}`);
+      throw new Error(`Booking not found: ${id}`);
+    }
+
     const updateRow = mapBookingToRow(updates);
     delete updateRow.id; // Don't update the ID
+    
+    // Remove undefined/null values to avoid issues (though mapBookingToRow should handle this now)
+    const cleanUpdateRow = Object.fromEntries(
+      Object.entries(updateRow).filter(([_, v]) => v !== undefined && v !== null)
+    );
+
+    // Ensure we have something to update
+    if (Object.keys(cleanUpdateRow).length === 0) {
+      console.warn('No fields to update');
+      return existingBooking; // Return existing if nothing to update
+    }
+
+    // Log for debugging
+    console.log('Updating booking:', { 
+      id, 
+      updateFields: Object.keys(cleanUpdateRow),
+      updateValues: cleanUpdateRow
+    });
 
     // Use limit(1) instead of single() to avoid UUID validation issues
     const { data, error } = await supabase
       .from('bookings')
-      .update(updateRow)
+      .update(cleanUpdateRow)
       .eq('id', id)
       .select()
       .limit(1);
 
     if (error) {
-      console.error('Error updating booking:', error);
-      return null;
+      console.error('Supabase update error:', {
+        id,
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        updateRow: cleanUpdateRow
+      });
+      throw new Error(`Failed to update booking: ${error.message || 'Unknown error'}. ${error.details || ''} ${error.hint || ''}`);
     }
 
     if (!data || data.length === 0) {
-      return null;
+      console.error(`No data returned after update for booking: ${id}`);
+      throw new Error(`Update completed but booking not found: ${id}`);
     }
 
     return mapRowToBooking(data[0]);
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    return null;
+  } catch (error: any) {
+    console.error('Error updating booking:', {
+      id,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error; // Re-throw to let API handle it
   }
 }
 

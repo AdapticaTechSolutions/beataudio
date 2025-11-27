@@ -120,6 +120,8 @@ export const QuoteEditor: React.FC<QuoteEditorProps> = ({
     setError('');
 
     try {
+      console.log('Saving booking update:', { bookingId: booking.id });
+      
       // Build services array from checkboxes
       const services: string[] = [];
       if (serviceLights) services.push('Lights');
@@ -156,17 +158,28 @@ export const QuoteEditor: React.FC<QuoteEditorProps> = ({
         lastEditedAt: new Date().toISOString(),
       };
 
-      const response = await bookingsApi.update(booking.id, updates);
+      // Remove undefined values
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      );
+
+      console.log('Update payload:', { bookingId: booking.id, updates: cleanUpdates });
+
+      const response = await bookingsApi.update(booking.id, cleanUpdates);
 
       if (response.success && response.data) {
+        console.log('Update successful:', response.data);
         onSave(response.data);
         setShowConfirmDialog(false);
         onClose();
       } else {
-        setError(response.error || 'Failed to save changes');
+        const errorMsg = response.error || 'Failed to save changes';
+        console.error('Update failed:', errorMsg, response);
+        setError(errorMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred while saving');
+      console.error('Update exception:', err);
+      setError(err.message || 'An error occurred while saving. Please check the console for details.');
     } finally {
       setIsSaving(false);
     }

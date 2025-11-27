@@ -35,7 +35,16 @@ export default async function handler(
     }
   } else if (req.method === 'PUT') {
     try {
+      const bookingId = id as string;
       const updateData = req.body;
+      
+      // Validate booking ID
+      if (!bookingId) {
+        res.status(400).json({ success: false, error: 'Booking ID is required' });
+        return;
+      }
+
+      console.log('Update request received:', { bookingId, updateFields: Object.keys(updateData) });
       
       // Security: Check if sensitive fields are being updated
       const sensitiveFields = ['quoteContent', 'archived', 'archivedAt', 'archivedBy', 'lastEditedBy', 'lastEditedAt'];
@@ -47,14 +56,26 @@ export default async function handler(
         console.warn('⚠️ Sensitive field update detected - implement proper admin auth in production');
       }
       
-      const updatedBooking = await updateBooking(id as string, updateData);
+      const updatedBooking = await updateBooking(bookingId, updateData);
       if (!updatedBooking) {
-        res.status(404).json({ success: false, error: 'Booking not found' });
+        console.error('Update failed - booking not found:', bookingId);
+        res.status(404).json({ 
+          success: false, 
+          error: 'Booking not found',
+          details: `Could not find booking with ID: ${bookingId}`
+        });
         return;
       }
+      
+      console.log('Update successful:', { bookingId, updatedFields: Object.keys(updateData) });
       res.status(200).json({ success: true, data: updatedBooking });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Update error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message || 'Failed to update booking',
+        details: error.details || error.hint
+      });
     }
   } else if (req.method === 'DELETE') {
     try {
