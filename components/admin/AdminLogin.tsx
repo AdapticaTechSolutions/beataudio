@@ -80,10 +80,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess }) => {
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
-          <div className="text-xs text-darkGray/60 text-center mt-2">
-            <p>Demo credentials:</p>
-            <p>Username: <strong>admin</strong> | Password: <strong>password</strong></p>
-          </div>
         </form>
          <div className="text-center text-darkGray text-sm">
             <a href="#" className="hover:text-primaryRed">&larr; Back to Main Site</a>
