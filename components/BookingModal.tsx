@@ -169,14 +169,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
 
   return (
     <>
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 transition-opacity duration-300 ${isExiting ? 'opacity-0' : 'opacity-100'} no-print`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 md:p-6 transition-opacity duration-300 ${isExiting ? 'opacity-0' : 'opacity-100'} no-print overscroll-contain`}>
       <div 
         className="absolute inset-0 bg-obsidian/90 backdrop-blur-xl transition-opacity" 
         onClick={handleClose}
       />
       
       <div className={`
-        relative w-full max-w-7xl h-[95vh] md:h-[850px] bg-[#12141a] rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-white/10
+        relative w-full max-w-7xl h-[100vh] md:h-[850px] max-h-[100vh] bg-[#12141a] rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-white/10
         transform transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1)
         ${isExiting ? 'scale-95 translate-y-4 opacity-0' : 'scale-100 translate-y-0 opacity-100'}
       `}>
@@ -263,19 +263,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose }) => {
         </div>
 
         {/* RIGHT PANEL: The Interaction Wizard */}
-        <div className="flex-1 flex flex-col relative bg-[#12141a]">
+        <div className="flex-1 flex flex-col relative bg-[#12141a] min-h-0 overflow-hidden">
           {/* Mobile Header */}
-          <div className="md:hidden p-6 border-b border-white/5 bg-black/40 flex justify-between items-center">
-             <div className="flex items-center gap-4">
+          <div className="md:hidden p-4 sm:p-6 border-b border-white/5 bg-black/40 flex justify-between items-center flex-shrink-0 sticky top-0 z-10">
+             <div className="flex items-center gap-2 sm:gap-4">
                 <span className="text-primaryRed font-bold uppercase tracking-widest text-xs">Step {step}/4</span>
-                <span className="text-white/60 text-xs">{details.eventDate ? details.eventDate.toLocaleDateString() : 'Select Date'}</span>
+                <span className="text-white/60 text-xs hidden sm:inline">{details.eventDate ? details.eventDate.toLocaleDateString() : 'Select Date'}</span>
              </div>
-             <button onClick={saveDraft} className="text-white/50 hover:text-white">
+             <button onClick={saveDraft} className="text-white/50 hover:text-white p-1">
                 {saveStatus === 'saved' ? <CheckCircleIcon className="w-5 h-5 text-green-500"/> : <SaveIcon className="w-5 h-5" />}
              </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 relative">
+          <div className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar p-4 sm:p-6 md:p-12 relative min-h-0">
              <StepIndicator current={step} total={4} />
              
              {step === 1 && <Step1_DateAndType details={details} setDetails={setDetails} onNext={nextStep} bookedDates={bookedDates} />}
@@ -460,13 +460,13 @@ const Step1_DateAndType: React.FC<{
       <h3 className="text-3xl font-serif font-bold text-white mb-2">When is the big day?</h3>
       <p className="text-white/50 mb-8">Start by securing your date on our calendar.</p>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        <div className="min-h-0">
              <Calendar />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 min-h-0 flex flex-col">
             <label className="text-white font-bold block mb-4">What type of event is it?</label>
-            <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 gap-3 flex-1 overflow-y-auto overscroll-contain pr-2 custom-scrollbar min-h-0">
                 {EVENT_TYPES.map(type => (
                     <div 
                         key={type.name}
@@ -500,11 +500,11 @@ const Step1_DateAndType: React.FC<{
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-6 sm:mt-8 flex justify-end flex-shrink-0 pt-4 border-t border-white/10 md:border-0 md:pt-0">
          <button 
             onClick={onNext}
             disabled={!details.eventDate || !details.eventType}
-            className="group flex items-center bg-white text-black font-bold py-4 px-8 rounded-full hover:bg-primaryRed hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            className="group flex items-center bg-white text-black font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:bg-primaryRed hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 w-full sm:w-auto justify-center"
          >
             Next Step <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
          </button>
@@ -585,11 +585,11 @@ const Step2_Services: React.FC<{
           </div>
       )}
 
-      <div className="flex justify-between items-center mt-8">
-         <button onClick={onPrev} className="text-white/50 hover:text-white font-semibold transition-colors">Back</button>
+      <div className="flex justify-between items-center mt-6 sm:mt-8 pt-4 border-t border-white/10 md:border-0 md:pt-0 flex-shrink-0">
+         <button onClick={onPrev} className="text-white/50 hover:text-white font-semibold transition-colors py-2 px-4">Back</button>
          <button 
             onClick={onNext}
-            className="group flex items-center bg-white text-black font-bold py-4 px-8 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-300"
+            className="group flex items-center bg-white text-black font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-300"
          >
             Next Step <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
          </button>
@@ -721,12 +721,12 @@ const Step3_Details: React.FC<{
         </div>
       </div>
 
-      <div className="flex justify-between items-center mt-8">
-         <button onClick={onPrev} className="text-white/50 hover:text-white font-semibold transition-colors">Back</button>
+      <div className="flex justify-between items-center mt-6 sm:mt-8 pt-4 border-t border-white/10 md:border-0 md:pt-0 flex-shrink-0">
+         <button onClick={onPrev} className="text-white/50 hover:text-white font-semibold transition-colors py-2 px-4">Back</button>
          <button 
             onClick={onNext}
             disabled={!details.venueAddress || !details.fullName || !details.celNumber || !details.email}
-            className="group flex items-center bg-white text-black font-bold py-4 px-8 rounded-full hover:bg-primaryRed hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            className="group flex items-center bg-white text-black font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-full hover:bg-primaryRed hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
          >
             Review & Pay <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
          </button>
@@ -823,17 +823,17 @@ const Step4_Submission: React.FC<{
                             <br/>You will receive a confirmation via email or Messenger shortly.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                             <button 
                                 onClick={() => window.print()}
-                                className="flex items-center justify-center bg-white text-black font-bold py-3 px-6 rounded-full hover:bg-primaryRed hover:text-white transition-all duration-300 shadow-lg"
+                                className="flex items-center justify-center bg-white text-black font-bold py-3 px-6 rounded-full hover:bg-primaryRed hover:text-white active:bg-opacity-90 transition-all duration-300 shadow-lg w-full sm:w-auto touch-manipulation"
                             >
                                 <DownloadIcon className="w-5 h-5 mr-2" />
                                 Download Summary
                             </button>
                              <button 
                                 onClick={handleOpenMessenger}
-                                className="flex items-center justify-center bg-[#0084FF] text-white font-bold py-3 px-6 rounded-full hover:bg-[#0072db] transition-all duration-300 shadow-lg"
+                                className="flex items-center justify-center bg-[#0084FF] text-white font-bold py-3 px-6 rounded-full hover:bg-[#0072db] active:bg-[#0060c0] transition-all duration-300 shadow-lg w-full sm:w-auto touch-manipulation"
                             >
                                 <FacebookIcon className="w-5 h-5 mr-2" />
                                 Open Messenger
@@ -920,18 +920,18 @@ const Step4_Submission: React.FC<{
     }
 
     return (
-        <div className="animate-enter-slide-up h-full flex flex-col">
-             <div className="flex justify-between items-start mb-4 md:mb-6">
+        <div className="animate-enter-slide-up flex flex-col min-h-0">
+             <div className="flex justify-between items-start mb-4 md:mb-6 flex-shrink-0">
                 <div>
                     <h3 className="text-2xl md:text-3xl font-serif font-bold text-white mb-1 md:mb-2">Booking Summary</h3>
                     <p className="text-white/50 text-sm md:text-base">Review your details and settle the reservation fee to lock your date.</p>
                 </div>
-                 <button onClick={onClose} className="md:hidden text-white/50"><XIcon className="w-6 h-6"/></button>
+                 <button onClick={onClose} className="md:hidden text-white/50 flex-shrink-0 ml-2"><XIcon className="w-6 h-6"/></button>
              </div>
 
-             <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-8 lg:gap-6 overflow-hidden min-h-0">
+             <div className="flex-1 flex flex-col lg:flex-row gap-4 md:gap-8 lg:gap-6 min-h-0 overflow-hidden">
                 {/* LEFT: RICH SUMMARY */}
-                <div className="flex-1 bg-white/5 rounded-2xl p-4 md:p-6 lg:p-8 border border-white/10 overflow-y-auto custom-scrollbar flex flex-col shadow-inner min-h-0">
+                <div className="flex-1 bg-white/5 rounded-2xl p-4 md:p-6 lg:p-8 border border-white/10 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col shadow-inner min-h-0">
                     <div className="flex items-center justify-between mb-6 md:mb-8 pb-4 md:pb-6 border-b border-white/10">
                          <div>
                             <h4 className="text-white font-serif font-bold text-2xl">Event Itinerary</h4>
@@ -1033,8 +1033,8 @@ const Step4_Submission: React.FC<{
                 </div>
 
                 {/* RIGHT: PAYMENT INSTRUCTIONS */}
-                <div className="w-full lg:w-[400px] flex flex-col">
-                    <div className="bg-gradient-to-b from-[#1a1d26] to-black border border-white/20 rounded-2xl shadow-2xl flex-1 flex flex-col relative overflow-y-auto custom-scrollbar">
+                <div className="w-full lg:w-[400px] flex flex-col min-h-0">
+                    <div className="bg-gradient-to-b from-[#1a1d26] to-black border border-white/20 rounded-2xl shadow-2xl flex-1 flex flex-col relative overflow-y-auto overscroll-contain custom-scrollbar min-h-0">
                         <div className="p-4 md:p-6 relative z-10 min-h-0">
                             <div className="mb-4 pb-4 border-b border-white/10">
                                 <h4 className="text-primaryRed font-bold text-lg md:text-xl mb-1">To Reserve</h4>
@@ -1088,10 +1088,10 @@ const Step4_Submission: React.FC<{
                                 <p>* Remaining balance on the day of event.</p>
                             </div>
 
-                            <div className="space-y-2.5">
+                            <div className="space-y-2.5 flex-shrink-0">
                                 <button 
                                     onClick={handleOpenMessenger}
-                                    className="w-full bg-[#0084FF] hover:bg-[#0072db] text-white font-bold py-2.5 md:py-3.5 rounded-xl flex items-center justify-center transition-all shadow-lg shadow-blue-900/20 group text-sm md:text-base"
+                                    className="w-full bg-[#0084FF] hover:bg-[#0072db] active:bg-[#0060c0] text-white font-bold py-3 md:py-3.5 rounded-xl flex items-center justify-center transition-all shadow-lg shadow-blue-900/20 group text-sm md:text-base touch-manipulation"
                                 >
                                     <FacebookIcon className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                                     Send Payment Proof
@@ -1104,7 +1104,7 @@ const Step4_Submission: React.FC<{
                                 <div className="pt-3 mt-2 border-t border-white/10">
                                      <button 
                                         onClick={handleSubmit}
-                                        className="w-full bg-primaryRed text-white font-bold py-2.5 md:py-3.5 px-4 md:px-6 rounded-xl hover:bg-opacity-90 transition-all transform hover:scale-105 shadow-lg shadow-red-900/20 text-sm md:text-base"
+                                        className="w-full bg-primaryRed text-white font-bold py-3 md:py-3.5 px-4 md:px-6 rounded-xl hover:bg-opacity-90 active:bg-opacity-80 transition-all transform active:scale-95 shadow-lg shadow-red-900/20 text-sm md:text-base touch-manipulation"
                                     >
                                         Complete Booking
                                     </button>
