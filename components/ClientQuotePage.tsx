@@ -95,23 +95,34 @@ export const ClientQuotePage: React.FC<ClientQuotePageProps> = ({ booking, onPay
                                 </div>
                             </div>
 
-                            <div className="mb-6">
-                                <h3 className="font-bold text-black mb-3">Included Services</h3>
-                                <ul className="space-y-2">
-                                    {booking.services.map((s, i) => (
-                                        <li key={i} className="flex items-center text-darkGray">
-                                            <CheckCircleIcon className="w-5 h-5 text-primaryRed mr-3" />
-                                            {s}
-                                        </li>
-                                    ))}
-                                    {booking.bandRider && (
-                                        <li className="flex items-start text-darkGray mt-4 pt-4 border-t border-mediumGray/50">
-                                            <span className="text-xs bg-black text-white px-2 py-0.5 rounded mr-2 mt-0.5">Note</span>
-                                            <span className="text-sm italic">Includes Band Rider setup requirements.</span>
-                                        </li>
-                                    )}
-                                </ul>
-                            </div>
+                            {/* Custom Quote Content or Default */}
+                            {booking.quoteContent ? (
+                                <div className="mb-6">
+                                    <div className="bg-lightGray p-6 rounded-lg border border-mediumGray">
+                                        <div className="prose prose-sm max-w-none whitespace-pre-wrap text-darkGray">
+                                            {booking.quoteContent}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mb-6">
+                                    <h3 className="font-bold text-black mb-3">Included Services</h3>
+                                    <ul className="space-y-2">
+                                        {booking.services.map((s, i) => (
+                                            <li key={i} className="flex items-center text-darkGray">
+                                                <CheckCircleIcon className="w-5 h-5 text-primaryRed mr-3" />
+                                                {s}
+                                            </li>
+                                        ))}
+                                        {booking.bandRider && (
+                                            <li className="flex items-start text-darkGray mt-4 pt-4 border-t border-mediumGray/50">
+                                                <span className="text-xs bg-black text-white px-2 py-0.5 rounded mr-2 mt-0.5">Note</span>
+                                                <span className="text-sm italic">Includes Band Rider setup requirements.</span>
+                                            </li>
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     </div>
 

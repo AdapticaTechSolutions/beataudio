@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import type { Booking } from '../../types';
-import { MailIcon, CheckCircleIcon, ArrowRightIcon } from '../icons';
+import { MailIcon, CheckCircleIcon, ArrowRightIcon, FileEditIcon } from '../icons';
 
 interface InquiriesViewProps {
   bookings: Booking[];
   onGenerateQuote: (bookingId: string) => void;
+  onEditQuote?: (booking: Booking) => void;
+  currentUser?: { id: string; username: string; role: string };
 }
 
-export const InquiriesView: React.FC<InquiriesViewProps> = ({ bookings, onGenerateQuote }) => {
+export const InquiriesView: React.FC<InquiriesViewProps> = ({ 
+  bookings, 
+  onGenerateQuote,
+  onEditQuote,
+  currentUser 
+}) => {
+  const isAdmin = currentUser?.role === 'admin';
   const inquiries = bookings.filter(b => b.status === 'Inquiry');
   const quotesSent = bookings.filter(b => b.status === 'QuoteSent');
 
@@ -48,12 +56,23 @@ export const InquiriesView: React.FC<InquiriesViewProps> = ({ bookings, onGenera
                         <p><strong className="text-black">Services:</strong> {inquiry.services.join(', ')}</p>
                     </div>
                     
-                    <button 
-                        onClick={() => onGenerateQuote(inquiry.id)}
-                        className="w-full bg-black text-white font-bold py-2 rounded hover:bg-primaryRed transition-colors flex items-center justify-center text-sm"
-                    >
-                        Review & Send Quote Link
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => onGenerateQuote(inquiry.id)}
+                            className="flex-1 bg-black text-white font-bold py-2 rounded hover:bg-primaryRed transition-colors flex items-center justify-center text-sm"
+                        >
+                            Review & Send Quote Link
+                        </button>
+                        {isAdmin && onEditQuote && (
+                            <button
+                                onClick={() => onEditQuote(inquiry)}
+                                className="px-3 bg-primaryRed text-white font-bold py-2 rounded hover:bg-opacity-90 transition-colors flex items-center justify-center text-sm"
+                                title="Edit Quote Content"
+                            >
+                                <FileEditIcon className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             ))}
         </div>
@@ -86,9 +105,20 @@ export const InquiriesView: React.FC<InquiriesViewProps> = ({ bookings, onGenera
                           <td className="p-4 text-darkGray">{q.eventDate}</td>
                           <td className="p-4 font-bold text-black">₱{(q.totalAmount || 0).toLocaleString()}</td>
                           <td className="p-4">
-                              <span className="inline-flex items-center text-green-700 bg-green-100 px-2 py-1 rounded text-xs">
-                                  <MailIcon className="w-3 h-3 mr-1" /> Link Sent
-                              </span>
+                              <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center text-green-700 bg-green-100 px-2 py-1 rounded text-xs">
+                                      <MailIcon className="w-3 h-3 mr-1" /> Link Sent
+                                  </span>
+                                  {isAdmin && onEditQuote && (
+                                      <button
+                                          onClick={() => onEditQuote(q)}
+                                          className="text-primaryRed hover:text-red-700 p-1"
+                                          title="Edit Quote"
+                                      >
+                                          <FileEditIcon className="w-4 h-4" />
+                                      </button>
+                                  )}
+                              </div>
                           </td>
                       </tr>
                   ))}

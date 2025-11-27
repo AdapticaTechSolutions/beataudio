@@ -26,6 +26,19 @@ export interface PortfolioItem {
   title: string;
 }
 
+export interface PaymentRecord {
+  id: string;
+  bookingId: string;
+  amount: number;
+  paymentType: 'reservation' | 'downpayment' | 'full' | 'partial';
+  paymentMethod: string;
+  transactionId?: string;
+  paidAt: string;
+  paidBy?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface Booking {
   id: string;
   customerName: string;
@@ -39,7 +52,11 @@ export interface Booking {
   services: string[]; // e.g. ["Lights", "Sounds", "LED Wall"]
   bandRider?: string;
   totalAmount?: number; // Set by admin
+  quoteContent?: string; // Custom quote content editable by admin
   status: 'Inquiry' | 'QuoteSent' | 'Confirmed' | 'Cancelled';
+  archived?: boolean; // Archive flag
+  archivedAt?: string; // Archive timestamp
+  archivedBy?: string; // Admin who archived
   createdAt?: string;
   updatedAt?: string;
   fullName?: string; // From booking form
@@ -53,6 +70,9 @@ export interface Booking {
   serviceSmoke?: boolean;
   hasBand?: boolean;
   additionalNotes?: string;
+  paymentHistory?: PaymentRecord[]; // Payment records
+  lastEditedBy?: string; // Admin who last edited
+  lastEditedAt?: string; // Last edit timestamp
 }
 
 export interface User {
@@ -63,6 +83,19 @@ export interface User {
   passwordHash: string; // In production, use proper hashing
   createdAt: string;
   lastLogin?: string;
+  permissions?: string[]; // Additional permissions for RBAC
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  username: string;
+  action: 'create' | 'update' | 'delete' | 'archive' | 'unarchive' | 'quote_edit' | 'payment_add';
+  entityType: 'booking' | 'quote' | 'payment';
+  entityId: string;
+  changes?: Record<string, any>;
+  timestamp: string;
+  ipAddress?: string;
 }
 
 export interface AuthResponse {

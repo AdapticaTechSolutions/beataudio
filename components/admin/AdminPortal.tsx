@@ -3,21 +3,40 @@ import React, { useState, useEffect } from 'react';
 import { AdminHeader } from './AdminHeader';
 import { Sidebar } from './Sidebar';
 import { ScheduleView } from './ScheduleView';
-import { InquiriesView } from './InquiriesView'; 
+import { InquiriesView } from './InquiriesView';
+import { OrderHistoryView } from './OrderHistoryView';
+import { PaymentHistoryView } from './PaymentHistoryView';
+import { ArchiveView } from './ArchiveView';
+import { QuoteEditor } from './QuoteEditor';
 import { bookingsApi } from '../../lib/api';
-import type { Booking } from '../../types';
+import type { Booking, User } from '../../types';
 
 interface AdminPortalProps {
   onLogout: () => void;
 }
 
-export type AdminView = 'schedule' | 'inquiries';
+export type AdminView = 'schedule' | 'inquiries' | 'orders' | 'payments' | 'archive';
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
   const [activeView, setActiveView] = useState<AdminView>('schedule');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [editingQuote, setEditingQuote] = useState<Booking | null>(null);
+
+  // Get current user from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('admin_user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUser(user);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, []);
 
   // Fetch bookings from API
   useEffect(() => {
@@ -46,6 +65,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
       const hash = window.location.hash;
       if (hash.includes('/admin/inquiries')) {
         setActiveView('inquiries');
+      } else if (hash.includes('/admin/orders')) {
+        setActiveView('orders');
+      } else if (hash.includes('/admin/payments')) {
+        setActiveView('payments');
+      } else if (hash.includes('/admin/archive')) {
+        setActiveView('archive');
       } else if (hash.includes('/admin/schedule')) {
         setActiveView('schedule');
       }
@@ -87,6 +112,23 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
     }
   };
 
+  const handleEditQuote = (booking: Booking) => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      alert('Only administrators can edit quotes');
+      return;
+    }
+    setEditingQuote(booking);
+  };
+
+  const handleQuoteSave = (updatedBooking: Booking) => {
+    setBookings(prevBookings =>
+      prevBookings.map(b =>
+        b.id === updatedBooking.id ? updatedBooking : b
+      )
+    );
+    setEditingQuote(null);
+  };
+
   return (
     <div className="min-h-screen font-sans flex relative">
       {/* Mobile Overlay */}
@@ -120,11 +162,45 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
           ) : (
             <>
               {activeView === 'schedule' && <ScheduleView bookings={bookings} />}
-              {activeView === 'inquiries' && <InquiriesView bookings={bookings} onGenerateQuote={handleGenerateQuote} />}
+              {activeView === 'inquiries' && (
+                <InquiriesView 
+                  bookings={bookings} 
+                  onGenerateQuote={handleGenerateQuote}
+                  onEditQuote={handleEditQuote}
+                  currentUser={currentUser || { id: '', username: '', role: 'viewer' }}
+                />
+              )}
+              {activeView === 'orders' && currentUser && (
+                <OrderHistoryView 
+                  bookings={bookings} 
+                  currentUser={currentUser}
+                />
+              )}
+              {activeView === 'payments' && currentUser && (
+                <PaymentHistoryView 
+                  bookings={bookings}
+                  currentUser={currentUser}
+                />
+              )}
+              {activeView === 'archive' && currentUser && (
+                <ArchiveView 
+                  bookings={bookings}
+                  onRefresh={fetchBookings}
+                  currentUser={currentUser}
+                />
+              )}
             </>
           )}
         </main>
       </div>
+      {editingQuote && currentUser && (
+        <QuoteEditor
+          booking={editingQuote}
+          onClose={() => setEditingQuote(null)}
+          onSave={handleQuoteSave}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 };

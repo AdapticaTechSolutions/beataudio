@@ -36,6 +36,17 @@ export default async function handler(
   } else if (req.method === 'PUT') {
     try {
       const updateData = req.body;
+      
+      // Security: Check if sensitive fields are being updated
+      const sensitiveFields = ['quoteContent', 'archived', 'archivedAt', 'archivedBy', 'lastEditedBy', 'lastEditedAt'];
+      const hasSensitiveFields = Object.keys(updateData).some(key => sensitiveFields.includes(key));
+      
+      if (hasSensitiveFields) {
+        // In production, verify admin token here
+        // For now, we'll allow but log a warning
+        console.warn('⚠️ Sensitive field update detected - implement proper admin auth in production');
+      }
+      
       const updatedBooking = await updateBooking(id as string, updateData);
       if (!updatedBooking) {
         res.status(404).json({ success: false, error: 'Booking not found' });
