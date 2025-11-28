@@ -88,27 +88,89 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
     setIsMobileSidebarOpen(false); // Close mobile menu on navigate
   };
 
-  const handleGenerateQuote = async (bookingId: string) => {
-    const quoteAmount = 35000; 
+  const handleValidatePayment = async (
+    bookingId: string,
+    paymentData: {
+      referenceNumber: string;
+      amount: number;
+      paymentMethod: string;
+      notes?: string;
+    }
+  ) => {
     try {
+      // Find the booking to get expected amount
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) {
+        throw new Error('Booking not found');
+      }
+
+      // Determine payment type based on amount
+      // Reservation fee is typically ₱1,000
+      const isReservation = paymentData.amount === 1000 || paymentData.amount < 5000;
+      const paymentType = isReservation ? 'reservation' : 'downpayment';
+
+      // Get current user for validatedBy field
+      const currentUsername = currentUser?.username || 'admin';
+
+      // Create payment record in database
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+      const paymentResponse = await fetch(`${API_BASE_URL}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId,
+          amount: paymentData.amount,
+          paymentType,
+          paymentMethod: paymentData.paymentMethod,
+          referenceNumber: paymentData.referenceNumber,
+          notes: paymentData.notes,
+          paidBy: booking.customerName,
+          validatedBy: currentUsername,
+        }),
+      });
+
+      const paymentResult = await paymentResponse.json();
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error || 'Failed to save payment record');
+      }
+
+      // Update booking status to Confirmed after payment validation
       const response = await bookingsApi.update(bookingId, {
-        status: 'QuoteSent',
-        totalAmount: quoteAmount,
+        status: 'Confirmed',
+        // Keep existing totalAmount or set it if not set
+        totalAmount: booking.totalAmount || paymentData.amount,
       });
       
       if (response.success) {
+        // Update local state
         setBookings(prevBookings =>
           prevBookings.map(b =>
-            b.id === bookingId ? { ...b, status: 'QuoteSent', totalAmount: quoteAmount } : b
+            b.id === bookingId 
+              ? { 
+                  ...b, 
+                  status: 'Confirmed',
+                  totalAmount: booking.totalAmount || paymentData.amount,
+                } 
+              : b
           )
         );
-        alert(`Link generated for ${bookingId}. \n\nClient Link: ${window.location.origin}/#/quote/${bookingId}`);
+        
+        // Show success message with reference number
+        alert(
+          `Payment validated and recorded successfully!\n\n` +
+          `Booking ID: ${bookingId}\n` +
+          `Reference Number: ${paymentData.referenceNumber}\n` +
+          `Amount: ₱${paymentData.amount.toLocaleString()}\n` +
+          `Payment Type: ${paymentType}\n` +
+          `Status: Confirmed\n\n` +
+          `Payment record has been saved to the database.`
+        );
       } else {
-        alert('Failed to update booking. Please try again.');
+        throw new Error(response.error || 'Failed to validate payment');
       }
-    } catch (error) {
-      console.error('Error generating quote:', error);
-      alert('An error occurred. Please try again.');
+    } catch (error: any) {
+      console.error('Error validating payment:', error);
+      throw error; // Re-throw to let modal handle it
     }
   };
 
@@ -165,8 +227,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
               {activeView === 'inquiries' && (
                 <InquiriesView 
                   bookings={bookings} 
-                  onGenerateQuote={handleGenerateQuote}
-                  onEditQuote={handleEditQuote}
+                  onValidatePayment={handleValidatePayment}
                   currentUser={currentUser || { id: '', username: '', role: 'viewer' }}
                 />
               )}

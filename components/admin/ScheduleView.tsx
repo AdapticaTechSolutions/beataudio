@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Booking } from '../../types';
 import { CalendarIcon, ListIcon } from '../icons';
+import { BookingDetailsModal } from './BookingDetailsModal';
 
 const statusColors: { [key in Booking['status']]: { bg: string; text: string; dot: string; border: string; } } = {
   Inquiry: { bg: 'bg-gray-100', text: 'text-gray-800', dot: 'bg-gray-500', border: 'border-gray-500' },
@@ -23,7 +24,7 @@ const formatDateToISO = (date: Date) => {
     return `${year}-${month}-${day}`;
 }
 
-const ListView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
+const ListView: React.FC<{ bookings: Booking[]; onBookingClick: (booking: Booking) => void }> = ({ bookings, onBookingClick }) => (
   <div className="bg-white rounded-lg shadow-card overflow-hidden mt-6">
     <div className="overflow-x-auto">
       <table className="w-full text-left">
@@ -39,7 +40,11 @@ const ListView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
         </thead>
         <tbody>
           {bookings.map((booking) => (
-            <tr key={booking.id} className="border-b border-mediumGray/50 last:border-b-0 hover:bg-lightGray/50">
+            <tr 
+              key={booking.id} 
+              className="border-b border-mediumGray/50 last:border-b-0 hover:bg-lightGray/50 cursor-pointer"
+              onClick={() => onBookingClick(booking)}
+            >
               <td className="p-4 text-darkGray font-mono text-sm">{booking.id}</td>
               <td className="p-4 text-black font-medium">{booking.customerName}</td>
               <td className="p-4 text-darkGray">{new Date(booking.eventDate + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
@@ -58,7 +63,7 @@ const ListView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
   </div>
 );
 
-const CalendarView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => {
+const CalendarView: React.FC<{ bookings: Booking[]; onBookingClick: (booking: Booking) => void }> = ({ bookings, onBookingClick }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -149,13 +154,18 @@ const CalendarView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => {
                 <div className="space-y-4 max-h-[450px] overflow-y-auto">
                     {selectedDayBookings.length > 0 ? (
                         selectedDayBookings.map(booking => (
-                            <div key={booking.id} className={`p-3 bg-lightGray rounded-md border-l-4 ${statusColors[booking.status].border}`}>
+                            <div 
+                                key={booking.id} 
+                                className={`p-3 bg-lightGray rounded-md border-l-4 ${statusColors[booking.status].border} cursor-pointer hover:bg-mediumGray transition-colors`}
+                                onClick={() => onBookingClick(booking)}
+                            >
                                 <p className="font-semibold text-black">{booking.customerName}</p>
                                 <p className="text-sm text-darkGray">{booking.eventType} - {booking.services.join(', ')}</p>
                                 <div className="flex items-center mt-1">
                                   <span className={`w-2 h-2 rounded-full mr-2 ${statusColors[booking.status].dot}`}></span>
                                   <span className={`text-xs font-semibold ${statusColors[booking.status].text}`}>{booking.status}</span>
                                 </div>
+                                <p className="text-xs text-darkGray mt-2">Click to view details</p>
                             </div>
                         ))
                     ) : (
@@ -169,6 +179,11 @@ const CalendarView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => {
 
 export const ScheduleView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => {
     const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    
+    const handleBookingClick = (booking: Booking) => {
+        setSelectedBooking(booking);
+    };
     
     return (
         <div>
@@ -192,7 +207,18 @@ export const ScheduleView: React.FC<{ bookings: Booking[] }> = ({ bookings }) =>
                 </div>
             </div>
 
-            {viewMode === 'list' ? <ListView bookings={bookings} /> : <CalendarView bookings={bookings} />}
+            {viewMode === 'list' ? (
+                <ListView bookings={bookings} onBookingClick={handleBookingClick} />
+            ) : (
+                <CalendarView bookings={bookings} onBookingClick={handleBookingClick} />
+            )}
+
+            {selectedBooking && (
+                <BookingDetailsModal
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                />
+            )}
         </div>
     );
 };

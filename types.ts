@@ -32,11 +32,14 @@ export interface PaymentRecord {
   amount: number;
   paymentType: 'reservation' | 'downpayment' | 'full' | 'partial';
   paymentMethod: string;
+  referenceNumber?: string; // Reference number from payment screenshot
   transactionId?: string;
   paidAt: string;
-  paidBy?: string;
+  paidBy?: string; // Name of person who made payment
+  validatedBy?: string; // Admin who validated the payment
   notes?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Booking {

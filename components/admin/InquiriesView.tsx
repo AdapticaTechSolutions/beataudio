@@ -1,37 +1,40 @@
 import React, { useState } from 'react';
 import type { Booking } from '../../types';
 import { MailIcon, CheckCircleIcon, ArrowRightIcon, FileEditIcon } from '../icons';
+import { PaymentValidationModal } from './PaymentValidationModal';
 
 interface InquiriesViewProps {
   bookings: Booking[];
-  onGenerateQuote: (bookingId: string) => void;
-  onEditQuote?: (booking: Booking) => void;
+  onValidatePayment: (bookingId: string, paymentData: {
+    referenceNumber: string;
+    amount: number;
+    paymentMethod: string;
+    notes?: string;
+  }) => Promise<void>;
   currentUser?: { id: string; username: string; role: string };
 }
 
 export const InquiriesView: React.FC<InquiriesViewProps> = ({ 
   bookings, 
-  onGenerateQuote,
-  onEditQuote,
+  onValidatePayment,
   currentUser 
 }) => {
-  const isAdmin = currentUser?.role === 'admin';
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const inquiries = bookings.filter(b => b.status === 'Inquiry');
-  const quotesSent = bookings.filter(b => b.status === 'QuoteSent');
 
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
         <div>
-            <h1 className="text-3xl font-serif font-bold text-black">Client Inquiries</h1>
-            <p className="text-darkGray mt-1">Review details and send quotation links.</p>
+            <h1 className="text-3xl font-serif font-bold text-black">Payment Validation</h1>
+            <p className="text-darkGray mt-1">Validate payments from Messenger screenshots and cross-match with reference numbers.</p>
         </div>
       </div>
       
       {/* NEW INQUIRIES SECTION */}
       <h2 className="text-xl font-bold text-black mb-4 flex items-center">
-          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mr-2">{inquiries.length} New</span>
-          New Requests
+          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full mr-2">{inquiries.length} Pending</span>
+          Pending Payment Validation
       </h2>
       
       {inquiries.length > 0 ? (
@@ -56,78 +59,38 @@ export const InquiriesView: React.FC<InquiriesViewProps> = ({
                         <p><strong className="text-black">Services:</strong> {inquiry.services.join(', ')}</p>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="space-y-2">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-2">
+                            <p className="text-xs text-yellow-800">
+                                <strong>Note:</strong> Customer should send payment screenshot via Messenger with reference number.
+                            </p>
+                        </div>
                         <button 
-                            onClick={() => onGenerateQuote(inquiry.id)}
-                            className="flex-1 bg-black text-white font-bold py-2 rounded hover:bg-primaryRed transition-colors flex items-center justify-center text-sm"
+                            onClick={() => setSelectedBooking(inquiry)}
+                            className="w-full bg-primaryRed text-white font-bold py-2 rounded hover:bg-opacity-90 transition-colors flex items-center justify-center text-sm"
                         >
-                            Review & Send Quote Link
+                            <CheckCircleIcon className="w-4 h-4 mr-2" />
+                            Validate Payment
                         </button>
-                        {isAdmin && onEditQuote && (
-                            <button
-                                onClick={() => onEditQuote(inquiry)}
-                                className="px-3 bg-primaryRed text-white font-bold py-2 rounded hover:bg-opacity-90 transition-colors flex items-center justify-center text-sm"
-                                title="Edit Quote Content"
-                            >
-                                <FileEditIcon className="w-4 h-4" />
-                            </button>
-                        )}
                     </div>
                 </div>
             ))}
         </div>
       ) : (
-        <p className="text-darkGray italic mb-12">No new inquiries.</p>
+        <p className="text-darkGray italic mb-12">No pending payment validations.</p>
       )}
 
-      {/* PENDING PAYMENT (QUOTE SENT) SECTION */}
-      <h2 className="text-xl font-bold text-black mb-4 flex items-center">
-          <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">{quotesSent.length} Pending</span>
-          Waiting for Downpayment
-      </h2>
-      
-      <div className="bg-white rounded-lg shadow-card overflow-hidden">
-         <table className="w-full text-left">
-              <thead className="bg-lightGray border-b border-mediumGray">
-                <tr>
-                  <th className="p-4 font-semibold text-black text-sm">ID</th>
-                  <th className="p-4 font-semibold text-black text-sm">Customer</th>
-                  <th className="p-4 font-semibold text-black text-sm">Event Date</th>
-                  <th className="p-4 font-semibold text-black text-sm">Quote Amount</th>
-                  <th className="p-4 font-semibold text-black text-sm">Link Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                  {quotesSent.map(q => (
-                      <tr key={q.id} className="border-b border-mediumGray/50 last:border-b-0 text-sm">
-                          <td className="p-4 font-mono text-darkGray">{q.id}</td>
-                          <td className="p-4 font-medium text-black">{q.customerName}</td>
-                          <td className="p-4 text-darkGray">{q.eventDate}</td>
-                          <td className="p-4 font-bold text-black">₱{(q.totalAmount || 0).toLocaleString()}</td>
-                          <td className="p-4">
-                              <div className="flex items-center gap-2">
-                                  <span className="inline-flex items-center text-green-700 bg-green-100 px-2 py-1 rounded text-xs">
-                                      <MailIcon className="w-3 h-3 mr-1" /> Link Sent
-                                  </span>
-                                  {isAdmin && onEditQuote && (
-                                      <button
-                                          onClick={() => onEditQuote(q)}
-                                          className="text-primaryRed hover:text-red-700 p-1"
-                                          title="Edit Quote"
-                                      >
-                                          <FileEditIcon className="w-4 h-4" />
-                                      </button>
-                                  )}
-                              </div>
-                          </td>
-                      </tr>
-                  ))}
-                  {quotesSent.length === 0 && (
-                      <tr><td colSpan={5} className="p-4 text-center text-darkGray italic">No quotes pending payment.</td></tr>
-                  )}
-              </tbody>
-         </table>
-      </div>
+      {/* Payment Validation Modal */}
+      {selectedBooking && (
+        <PaymentValidationModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onValidate={async (bookingId, paymentData) => {
+            await onValidatePayment(bookingId, paymentData);
+            setSelectedBooking(null);
+          }}
+        />
+      )}
     </div>
   );
 };

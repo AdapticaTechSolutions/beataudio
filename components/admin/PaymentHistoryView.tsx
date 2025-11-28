@@ -19,6 +19,7 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
     amount: '',
     paymentType: 'reservation' as 'reservation' | 'downpayment' | 'full' | 'partial',
     paymentMethod: 'cash',
+    referenceNumber: '',
     transactionId: '',
     notes: '',
   });
@@ -35,7 +36,23 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
       const response = await fetch(`${API_BASE_URL}/payments`);
       const data = await response.json();
       if (data.success) {
-        setPayments(data.data || []);
+        // Map database fields to PaymentRecord format
+        const mappedPayments = (data.data || []).map((p: any) => ({
+          id: p.id,
+          bookingId: p.booking_id,
+          amount: parseFloat(p.amount),
+          paymentType: p.payment_type,
+          paymentMethod: p.payment_method,
+          referenceNumber: p.reference_number,
+          transactionId: p.transaction_id,
+          paidAt: p.paid_at,
+          paidBy: p.paid_by,
+          validatedBy: p.validated_by,
+          notes: p.notes,
+          createdAt: p.created_at,
+          updatedAt: p.updated_at,
+        }));
+        setPayments(mappedPayments);
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -56,9 +73,15 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...newPayment,
+          bookingId: newPayment.bookingId,
           amount: parseFloat(newPayment.amount),
+          paymentType: newPayment.paymentType,
+          paymentMethod: newPayment.paymentMethod,
+          referenceNumber: newPayment.referenceNumber,
+          transactionId: newPayment.transactionId,
+          notes: newPayment.notes,
           paidBy: currentUser.username,
+          validatedBy: currentUser.username,
         }),
       });
 
@@ -71,6 +94,7 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
           amount: '',
           paymentType: 'reservation',
           paymentMethod: 'cash',
+          referenceNumber: '',
           transactionId: '',
           notes: '',
         });
@@ -170,8 +194,9 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
               <th className="p-4 font-semibold text-black text-sm">Type</th>
               <th className="p-4 font-semibold text-black text-sm">Amount</th>
               <th className="p-4 font-semibold text-black text-sm">Method</th>
+              <th className="p-4 font-semibold text-black text-sm">Reference #</th>
               <th className="p-4 font-semibold text-black text-sm">Transaction ID</th>
-              <th className="p-4 font-semibold text-black text-sm">Recorded By</th>
+              <th className="p-4 font-semibold text-black text-sm">Validated By</th>
             </tr>
           </thead>
           <tbody>
@@ -202,15 +227,18 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
                     </td>
                     <td className="p-4 text-sm text-darkGray">{payment.paymentMethod}</td>
                     <td className="p-4 font-mono text-xs text-darkGray">
+                      {payment.referenceNumber || '-'}
+                    </td>
+                    <td className="p-4 font-mono text-xs text-darkGray">
                       {payment.transactionId || '-'}
                     </td>
-                    <td className="p-4 text-sm text-darkGray">{payment.paidBy || '-'}</td>
+                    <td className="p-4 text-sm text-darkGray">{payment.validatedBy || payment.paidBy || '-'}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-darkGray italic">
+                <td colSpan={9} className="p-8 text-center text-darkGray italic">
                   No payments found
                 </td>
               </tr>
@@ -283,13 +311,23 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-bold text-black mb-1">Reference Number</label>
+                <input
+                  type="text"
+                  value={newPayment.referenceNumber}
+                  onChange={(e) => setNewPayment({ ...newPayment, referenceNumber: e.target.value })}
+                  className="w-full border border-mediumGray rounded-lg p-2"
+                  placeholder="Reference number from payment screenshot"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-bold text-black mb-1">Transaction ID</label>
                 <input
                   type="text"
                   value={newPayment.transactionId}
                   onChange={(e) => setNewPayment({ ...newPayment, transactionId: e.target.value })}
                   className="w-full border border-mediumGray rounded-lg p-2"
-                  placeholder="Optional"
+                  placeholder="Optional - Transaction ID from payment gateway"
                 />
               </div>
               <div>

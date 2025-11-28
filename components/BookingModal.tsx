@@ -397,7 +397,22 @@ const Step1_DateAndType: React.FC<{
   
   // Custom Mini Calendar Implementation for better design control
   const Calendar = () => {
-    const [currentDate, setCurrentDate] = useState(details.eventDate || new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Minimum booking date: 1 month from today
+    const minBookableDate = new Date(today);
+    minBookableDate.setMonth(minBookableDate.getMonth() + 1);
+    minBookableDate.setHours(0, 0, 0, 0);
+    
+    const [currentDate, setCurrentDate] = useState(() => {
+      // Start calendar at minimum bookable month
+      if (details.eventDate && details.eventDate >= minBookableDate) {
+        return details.eventDate;
+      }
+      return minBookableDate;
+    });
+    
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
@@ -416,10 +431,31 @@ const Step1_DateAndType: React.FC<{
         return details.eventDate?.getDate() === d && details.eventDate?.getMonth() === month && details.eventDate?.getFullYear() === year;
     };
 
+    const isTooEarly = (d: number) => {
+        const checkDate = new Date(year, month, d);
+        checkDate.setHours(0, 0, 0, 0);
+        return checkDate < minBookableDate;
+    };
+
+    // Prevent navigating to months before minimum bookable date
+    const firstAllowedMonth = new Date(minBookableDate.getFullYear(), minBookableDate.getMonth(), 1);
+    const currentCalendarMonth = new Date(year, month, 1);
+    const canGoBack = currentCalendarMonth > firstAllowedMonth;
+
     return (
-        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 shadow-inner">
+        <div>
+          <p className="text-white/70 text-sm mb-4 text-center">
+            <span className="font-semibold">Note:</span> Bookings must be made at least 1 month in advance
+          </p>
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/10 shadow-inner">
             <div className="flex justify-between items-center mb-6 text-white">
-                <button onClick={() => setCurrentDate(new Date(year, month - 1))} className="p-2 hover:bg-white/10 rounded-full transition-colors">&lt;</button>
+                <button 
+                  onClick={() => setCurrentDate(new Date(year, month - 1))} 
+                  disabled={!canGoBack}
+                  className={`p-2 hover:bg-white/10 rounded-full transition-colors ${!canGoBack ? 'opacity-30 cursor-not-allowed' : ''}`}
+                >
+                  &lt;
+                </button>
                 <span className="font-serif text-xl font-bold">{currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                 <button onClick={() => setCurrentDate(new Date(year, month + 1))} className="p-2 hover:bg-white/10 rounded-full transition-colors">&gt;</button>
             </div>
@@ -431,19 +467,20 @@ const Step1_DateAndType: React.FC<{
                 {days.map(d => {
                     const booked = isBooked(d);
                     const selected = isSelected(d);
-                    const isPast = new Date(year, month, d) < new Date(new Date().setHours(0,0,0,0));
+                    const tooEarly = isTooEarly(d);
                     
                     return (
                         <button
                             key={d}
-                            disabled={booked || isPast}
-                            onClick={() => setDetails({ ...details, eventDate: new Date(year, month, d) })}
+                            disabled={booked || tooEarly}
+                            onClick={() => !booked && !tooEarly && setDetails({ ...details, eventDate: new Date(year, month, d) })}
                             className={`
                                 aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-all duration-200 relative group
                                 ${selected ? 'bg-primaryRed text-white shadow-glow-red scale-110 z-10 font-bold' : 'bg-white/5 text-white/80 hover:bg-white/20'}
                                 ${booked ? 'opacity-20 cursor-not-allowed' : ''}
-                                ${isPast ? 'opacity-20 cursor-not-allowed' : ''}
+                                ${tooEarly ? 'opacity-20 cursor-not-allowed' : ''}
                             `}
+                            title={tooEarly ? 'Bookings must be at least 1 month in advance' : booked ? 'This date is already booked' : ''}
                         >
                             {d}
                             {booked && <div className="absolute inset-0 flex items-center justify-center"><div className="w-full h-px bg-red-500 rotate-45"></div></div>}
@@ -451,6 +488,7 @@ const Step1_DateAndType: React.FC<{
                     )
                 })}
             </div>
+          </div>
         </div>
     )
   };
