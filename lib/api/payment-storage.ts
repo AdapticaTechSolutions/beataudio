@@ -45,12 +45,13 @@ function mapPaymentToRow(payment: Partial<PaymentRecord>): any {
     amount: payment.amount,
     payment_type: payment.paymentType,
     payment_method: payment.paymentMethod,
-    reference_number: payment.referenceNumber,
-    transaction_id: payment.transactionId,
+    // Convert empty strings to null for optional fields
+    reference_number: payment.referenceNumber && payment.referenceNumber.trim() ? payment.referenceNumber.trim() : null,
+    transaction_id: payment.transactionId && payment.transactionId.trim() ? payment.transactionId.trim() : null,
     paid_at: payment.paidAt || new Date().toISOString(),
-    paid_by: payment.paidBy,
-    validated_by: payment.validatedBy,
-    notes: payment.notes,
+    paid_by: payment.paidBy && payment.paidBy.trim() ? payment.paidBy.trim() : null,
+    validated_by: payment.validatedBy && payment.validatedBy.trim() ? payment.validatedBy.trim() : null,
+    notes: payment.notes && payment.notes.trim() ? payment.notes.trim() : null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -94,10 +95,17 @@ export async function createPayment(
     const supabase = getSupabaseClient();
     const paymentRow = mapPaymentToRow(payment);
 
-    // Remove undefined values
+    // Remove undefined values and ensure null for optional fields
     const cleanPaymentRow = Object.fromEntries(
       Object.entries(paymentRow).filter(([_, v]) => v !== undefined)
     );
+
+    console.log('Creating payment with data:', {
+      ...cleanPaymentRow,
+      // Don't log sensitive data, but log structure
+      reference_number_length: cleanPaymentRow.reference_number?.length,
+      transaction_id_length: cleanPaymentRow.transaction_id?.length,
+    });
 
     const { data, error } = await supabase
       .from('payments')
@@ -106,8 +114,20 @@ export async function createPayment(
       .single();
 
     if (error) {
-      console.error('Error creating payment:', error);
-      throw new Error(`Failed to create payment: ${error.message}`);
+      console.error('Error creating payment:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        fullError: JSON.stringify(error, null, 2),
+      });
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('pattern') || error.message?.includes('expected')) {
+        throw new Error(`Invalid data format: ${error.message}. Please check reference number and transaction ID format.`);
+      }
+      
+      throw new Error(`Failed to create payment: ${error.message || 'Unknown error'}`);
     }
 
     if (!data) {

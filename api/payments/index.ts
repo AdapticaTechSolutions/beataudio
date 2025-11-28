@@ -19,12 +19,6 @@ export default async function handler(
     return;
   }
 
-  const supabase = getSupabase();
-  if (!supabase) {
-    res.status(500).json({ success: false, error: 'Database not configured' });
-    return;
-  }
-
   if (req.method === 'GET') {
     try {
       const { bookingId } = req.query;
@@ -84,7 +78,23 @@ export default async function handler(
 
       res.status(201).json({ success: true, data: payment });
     } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
+      console.error('Payment creation error:', {
+        message: error.message,
+        stack: error.stack,
+        body: req.body,
+      });
+      
+      // Return more detailed error for debugging
+      const errorMessage = error.message || 'Failed to create payment';
+      res.status(500).json({ 
+        success: false, 
+        error: errorMessage,
+        // Include details in development
+        ...(process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'development' ? {
+          details: error.details,
+          hint: error.hint,
+        } : {}),
+      });
     }
   } else {
     res.status(405).json({ success: false, error: 'Method not allowed' });
