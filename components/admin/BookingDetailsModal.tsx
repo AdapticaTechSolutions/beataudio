@@ -25,7 +25,6 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoadingPayments, setIsLoadingPayments] = useState(true);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
   const [showRemovePaymentConfirm, setShowRemovePaymentConfirm] = useState(false);
   const [selectedPaymentToRemove, setSelectedPaymentToRemove] = useState<PaymentRecord | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -184,50 +183,6 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
     } catch (error: any) {
       console.error('Error cancelling booking:', error);
       alert(`Error cancelling booking: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleRefund = async () => {
-    setIsProcessing(true);
-    try {
-      // Delete all payments for this booking
-      const deletePromises = payments.map(payment =>
-        fetch(`${API_BASE_URL}/payments/${payment.id}`, {
-          method: 'DELETE',
-        })
-      );
-
-      const results = await Promise.all(deletePromises);
-      const failed = results.filter(r => !r.ok);
-
-      if (failed.length > 0) {
-        throw new Error('Some payments could not be refunded');
-      }
-
-      // Update booking status to Inquiry
-      const response = await bookingsApi.update(booking.id, {
-        status: 'Inquiry',
-      });
-
-      if (response.success) {
-        // Refresh payments
-        await fetchPayments();
-        if (onBookingUpdate && response.data) {
-          onBookingUpdate(response.data);
-        }
-        if (onPaymentRemoved) {
-          onPaymentRemoved();
-        }
-        setShowRefundConfirm(false);
-        alert('All payments refunded successfully. Booking status reset to Inquiry.');
-      } else {
-        throw new Error(response.error || 'Failed to update booking status');
-      }
-    } catch (error: any) {
-      console.error('Error processing refund:', error);
-      alert(`Error processing refund: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
@@ -659,24 +614,13 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           )}
 
           {booking.status !== 'Cancelled' && (
-            <>
-              {totalPaid > 0 && (
-                <button
-                  onClick={() => setShowRefundConfirm(true)}
-                  disabled={isProcessing}
-                  className="px-6 py-2 bg-yellow-600 text-white font-bold rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50"
-                >
-                  Refund All Payments
-                </button>
-              )}
-              <button
-                onClick={() => setShowCancelConfirm(true)}
-                disabled={isProcessing}
-                className="px-6 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                Cancel Booking
-              </button>
-            </>
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              disabled={isProcessing}
+              className="px-6 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              Cancel Booking
+            </button>
           )}
           <button
             onClick={onClose}
@@ -698,19 +642,6 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           isDestructive={true}
           onConfirm={handleCancelBooking}
           onCancel={() => setShowCancelConfirm(false)}
-        />
-      )}
-
-      {showRefundConfirm && (
-        <ConfirmationDialog
-          title="Refund All Payments"
-          message={`Are you sure you want to refund all payments (₱${totalPaid.toLocaleString()}) for booking ${booking.id}? This will remove all payment records and reset the booking status to Inquiry. This action cannot be undone.`}
-          confirmText="Yes, Process Refund"
-          cancelText="Cancel"
-          confirmColor="yellow"
-          isDestructive={true}
-          onConfirm={handleRefund}
-          onCancel={() => setShowRefundConfirm(false)}
         />
       )}
 
