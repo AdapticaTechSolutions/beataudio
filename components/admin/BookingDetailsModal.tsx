@@ -2,20 +2,33 @@ import React, { useState, useEffect } from 'react';
 import type { Booking, PaymentRecord } from '../../types';
 import { XIcon } from '../icons';
 import { calculateDeadlines, formatDeadlineStatus } from '../../lib/utils/deadlines';
+import { ConfirmationDialog } from './ConfirmationDialog';
+import { bookingsApi } from '../../lib/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
 
 interface BookingDetailsModalProps {
   booking: Booking;
   onClose: () => void;
+  onNavigateToPayments?: () => void;
+  onBookingUpdate?: (booking: Booking) => void;
+  onPaymentRemoved?: () => void;
 }
 
 export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   booking,
   onClose,
+  onNavigateToPayments,
+  onBookingUpdate,
+  onPaymentRemoved,
 }) => {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoadingPayments, setIsLoadingPayments] = useState(true);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showRefundConfirm, setShowRefundConfirm] = useState(false);
+  const [showRemovePaymentConfirm, setShowRemovePaymentConfirm] = useState(false);
+  const [selectedPaymentToRemove, setSelectedPaymentToRemove] = useState<PaymentRecord | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     fetchPayments();
@@ -60,6 +73,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   const totalAmount = booking.totalAmount || 0;
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const remainingBalance = totalAmount - totalPaid;
+  const isFullyPaid = totalPaid >= totalAmount && totalAmount > 0;
   const downpaymentAmount = totalAmount * 0.5;
   const finalPaymentAmount = totalAmount - downpaymentAmount;
 
@@ -195,8 +209,29 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Payment Deadlines */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Payment Status - Show Fully Paid if applicable */}
+          {isFullyPaid ? (
+            <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-2xl font-bold text-green-800 mb-2">✓ Fully Paid</h4>
+                  <p className="text-green-700">
+                    Total Amount: ₱{totalAmount.toLocaleString()} | 
+                    Total Paid: ₱{totalPaid.toLocaleString()}
+                  </p>
+                  {totalPaid > totalAmount && (
+                    <p className="text-sm text-green-600 mt-2">
+                      Overpayment: ₱{(totalPaid - totalAmount).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <div className="text-4xl">✓</div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Payment Deadlines */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Downpayment Deadline */}
             <div className={`border-2 rounded-lg p-4 ${
               downpaymentStatus.status === 'overdue' ? 'border-red-500 bg-red-50' :
@@ -338,16 +373,90 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-mediumGray p-4 flex justify-end">
+        {/* Action Buttons */}
+        <div className="sticky bottom-0 bg-white border-t border-mediumGray p-4 flex flex-wrap gap-3">
+          {!isFullyPaid && remainingBalance > 0 && onNavigateToPayments && (
+            <button
+              onClick={() => {
+                onClose();
+                onNavigateToPayments();
+              }}
+              className="px-6 py-2 bg-primaryRed text-white font-bold rounded-md hover:bg-opacity-90 transition-colors"
+            >
+              Pay Now
+            </button>
+          )}
+          {booking.status !== 'Cancelled' && (
+            <>
+              {totalPaid > 0 && (
+                <button
+                  onClick={() => setShowRefundConfirm(true)}
+                  disabled={isProcessing}
+                  className="px-6 py-2 bg-yellow-600 text-white font-bold rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50"
+                >
+                  Refund All Payments
+                </button>
+              )}
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                disabled={isProcessing}
+                className="px-6 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                Cancel Booking
+              </button>
+            </>
+          )}
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-primaryRed text-white font-bold rounded-md hover:bg-opacity-90 transition-colors"
+            className="px-6 py-2 bg-lightGray text-black font-bold rounded-md hover:bg-mediumGray transition-colors ml-auto"
           >
             Close
           </button>
         </div>
       </div>
+
+      {/* Confirmation Dialogs */}
+      {showCancelConfirm && (
+        <ConfirmationDialog
+          title="Cancel Booking"
+          message={`Are you sure you want to cancel booking ${booking.id}? This action will mark the booking as cancelled.`}
+          confirmText="Yes, Cancel Booking"
+          cancelText="No, Keep Booking"
+          confirmColor="red"
+          isDestructive={true}
+          onConfirm={handleCancelBooking}
+          onCancel={() => setShowCancelConfirm(false)}
+        />
+      )}
+
+      {showRefundConfirm && (
+        <ConfirmationDialog
+          title="Refund All Payments"
+          message={`Are you sure you want to refund all payments (₱${totalPaid.toLocaleString()}) for booking ${booking.id}? This will remove all payment records and reset the booking status to Inquiry. This action cannot be undone.`}
+          confirmText="Yes, Process Refund"
+          cancelText="Cancel"
+          confirmColor="yellow"
+          isDestructive={true}
+          onConfirm={handleRefund}
+          onCancel={() => setShowRefundConfirm(false)}
+        />
+      )}
+
+      {showRemovePaymentConfirm && selectedPaymentToRemove && (
+        <ConfirmationDialog
+          title="Remove Payment"
+          message={`Are you sure you want to remove payment of ₱${selectedPaymentToRemove.amount.toLocaleString()} (Ref: ${selectedPaymentToRemove.referenceNumber || 'N/A'})? This action cannot be undone.`}
+          confirmText="Yes, Remove Payment"
+          cancelText="Cancel"
+          confirmColor="red"
+          isDestructive={true}
+          onConfirm={handleRemovePayment}
+          onCancel={() => {
+            setShowRemovePaymentConfirm(false);
+            setSelectedPaymentToRemove(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -223,7 +223,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
             </div>
           ) : (
             <>
-              {activeView === 'schedule' && <ScheduleView bookings={bookings} />}
+              {activeView === 'schedule' && (
+                <ScheduleView 
+                  bookings={bookings}
+                  onNavigateToPayments={() => handleNavigate('payments')}
+                  onBookingUpdate={(updatedBooking) => {
+                    setBookings(prevBookings =>
+                      prevBookings.map(b =>
+                        b.id === updatedBooking.id ? updatedBooking : b
+                      )
+                    );
+                  }}
+                  onPaymentRemoved={fetchBookings}
+                />
+              )}
               {activeView === 'inquiries' && (
                 <InquiriesView 
                   bookings={bookings} 
@@ -235,6 +248,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
                 <OrderHistoryView 
                   bookings={bookings} 
                   currentUser={currentUser}
+                  onNavigateToPayments={() => handleNavigate('payments')}
+                  onBookingUpdate={(updatedBooking) => {
+                    setBookings(prevBookings =>
+                      prevBookings.map(b =>
+                        b.id === updatedBooking.id ? updatedBooking : b
+                      )
+                    );
+                  }}
+                  onPaymentRemoved={fetchBookings}
                 />
               )}
               {activeView === 'payments' && currentUser && (

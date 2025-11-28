@@ -103,8 +103,8 @@ export async function createPayment(
     console.log('Creating payment with data:', {
       ...cleanPaymentRow,
       // Don't log sensitive data, but log structure
-      reference_number_length: cleanPaymentRow.reference_number?.length,
-      transaction_id_length: cleanPaymentRow.transaction_id?.length,
+      reference_number_length: typeof cleanPaymentRow.reference_number === 'string' ? cleanPaymentRow.reference_number.length : 0,
+      transaction_id_length: typeof cleanPaymentRow.transaction_id === 'string' ? cleanPaymentRow.transaction_id.length : 0,
     });
 
     const { data, error } = await supabase

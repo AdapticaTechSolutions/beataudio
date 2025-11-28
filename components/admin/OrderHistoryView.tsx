@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import type { Booking } from '../../types';
+import { BookingDetailsModal } from './BookingDetailsModal';
 
 interface OrderHistoryViewProps {
   bookings: Booking[];
   currentUser: { id: string; username: string; role: string };
+  onNavigateToPayments?: () => void;
+  onBookingUpdate?: (booking: Booking) => void;
+  onPaymentRemoved?: () => void;
 }
 
-export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ bookings, currentUser }) => {
+export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ 
+  bookings, 
+  currentUser,
+  onNavigateToPayments,
+  onBookingUpdate,
+  onPaymentRemoved,
+}) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   // Filter out archived bookings
   const activeBookings = bookings.filter(b => !b.archived);
@@ -130,7 +141,8 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ bookings, cu
                 filteredBookings.map((booking) => (
                   <tr
                     key={booking.id}
-                    className="border-b border-mediumGray/50 last:border-b-0 hover:bg-lightGray/50 transition-colors"
+                    className="border-b border-mediumGray/50 last:border-b-0 hover:bg-lightGray/50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedBooking(booking)}
                   >
                     <td className="p-4 font-mono text-sm text-darkGray">{booking.id}</td>
                     <td className="p-4">
@@ -181,6 +193,25 @@ export const OrderHistoryView: React.FC<OrderHistoryViewProps> = ({ bookings, cu
       <div className="mt-6 text-sm text-darkGray">
         Showing {filteredBookings.length} of {activeBookings.length} orders
       </div>
+
+      {/* Booking Details Modal */}
+      {selectedBooking && (
+        <BookingDetailsModal
+          booking={selectedBooking}
+          onClose={() => setSelectedBooking(null)}
+          onNavigateToPayments={() => {
+            setSelectedBooking(null);
+            onNavigateToPayments?.();
+          }}
+          onBookingUpdate={(updatedBooking) => {
+            onBookingUpdate?.(updatedBooking);
+            setSelectedBooking(updatedBooking);
+          }}
+          onPaymentRemoved={() => {
+            onPaymentRemoved?.();
+          }}
+        />
+      )}
     </div>
   );
 };

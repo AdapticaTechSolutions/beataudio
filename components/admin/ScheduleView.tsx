@@ -177,7 +177,19 @@ const CalendarView: React.FC<{ bookings: Booking[]; onBookingClick: (booking: Bo
     );
 };
 
-export const ScheduleView: React.FC<{ bookings: Booking[] }> = ({ bookings }) => {
+interface ScheduleViewProps {
+  bookings: Booking[];
+  onNavigateToPayments?: () => void;
+  onBookingUpdate?: (booking: Booking) => void;
+  onPaymentRemoved?: () => void;
+}
+
+export const ScheduleView: React.FC<ScheduleViewProps> = ({ 
+  bookings,
+  onNavigateToPayments,
+  onBookingUpdate,
+  onPaymentRemoved,
+}) => {
     const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     
@@ -217,6 +229,17 @@ export const ScheduleView: React.FC<{ bookings: Booking[] }> = ({ bookings }) =>
                 <BookingDetailsModal
                     booking={selectedBooking}
                     onClose={() => setSelectedBooking(null)}
+                    onNavigateToPayments={() => {
+                        setSelectedBooking(null);
+                        onNavigateToPayments?.();
+                    }}
+                    onBookingUpdate={(updatedBooking) => {
+                        onBookingUpdate?.(updatedBooking);
+                        setSelectedBooking(updatedBooking);
+                    }}
+                    onPaymentRemoved={() => {
+                        onPaymentRemoved?.();
+                    }}
                 />
             )}
         </div>
