@@ -65,24 +65,52 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
       setIsLoading(true);
       const response = await fetch(`${API_BASE_URL}/payments`);
       const data = await response.json();
+      console.log('API Response:', data); // Debug log
       if (data.success) {
-        // Map database fields to PaymentRecord format
-        const mappedPayments = (data.data || []).map((p: any) => ({
-          id: p.id,
-          bookingId: p.booking_id,
-          amount: parseFloat(p.amount),
-          paymentType: p.payment_type,
-          paymentMethod: p.payment_method,
-          referenceNumber: p.reference_number,
-          transactionId: p.transaction_id,
-          paidAt: p.paid_at,
-          paidBy: p.paid_by,
-          validatedBy: p.validated_by,
-          notes: p.notes,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-        }));
+        // API already returns PaymentRecord[] format (camelCase) from payment-storage.ts
+        // The data is already mapped, so use it directly
+        const mappedPayments = (data.data || []).map((p: any) => {
+          // Check if data is already in camelCase format (from payment-storage.ts)
+          if (p.bookingId !== undefined || p.booking_id === undefined) {
+            // Already mapped to camelCase, use as-is
+            return {
+              id: p.id || '',
+              bookingId: p.bookingId || '',
+              amount: typeof p.amount === 'number' ? p.amount : parseFloat(p.amount || 0),
+              paymentType: p.paymentType || '',
+              paymentMethod: p.paymentMethod || '',
+              referenceNumber: p.referenceNumber || undefined,
+              transactionId: p.transactionId || undefined,
+              paidAt: p.paidAt || '',
+              paidBy: p.paidBy || undefined,
+              validatedBy: p.validatedBy || undefined,
+              notes: p.notes || undefined,
+              createdAt: p.createdAt || '',
+              updatedAt: p.updatedAt || undefined,
+            };
+          } else {
+            // Still in snake_case, map it
+            return {
+              id: p.id || '',
+              bookingId: p.booking_id || '',
+              amount: parseFloat(p.amount || 0),
+              paymentType: p.payment_type || '',
+              paymentMethod: p.payment_method || '',
+              referenceNumber: p.reference_number || undefined,
+              transactionId: p.transaction_id || undefined,
+              paidAt: p.paid_at || '',
+              paidBy: p.paid_by || undefined,
+              validatedBy: p.validated_by || undefined,
+              notes: p.notes || undefined,
+              createdAt: p.created_at || '',
+              updatedAt: p.updated_at || undefined,
+            };
+          }
+        });
+        console.log('Mapped payments:', mappedPayments); // Debug log
         setPayments(mappedPayments);
+      } else {
+        console.error('API returned error:', data.error);
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -239,26 +267,41 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
                 return (
                   <tr key={payment.id} className="border-b border-mediumGray/50 last:border-b-0">
                     <td className="p-4 text-sm text-darkGray">
-                      {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : 'N/A'}
+                      {payment.paidAt ? (() => {
+                        try {
+                          const date = new Date(payment.paidAt);
+                          if (isNaN(date.getTime())) {
+                            return 'Invalid Date';
+                          }
+                          return date.toLocaleDateString();
+                        } catch (e) {
+                          console.error('Date parsing error:', e, payment.paidAt);
+                          return 'Invalid Date';
+                        }
+                      })() : 'N/A'}
                     </td>
                     <td className="p-4 font-mono text-sm text-darkGray">{payment.bookingId || 'N/A'}</td>
                     <td className="p-4 text-sm font-medium text-black">
                       {booking?.customerName || 'N/A'}
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                        payment.paymentType === 'full' ? 'bg-green-100 text-green-800' :
-                        payment.paymentType === 'downpayment' ? 'bg-blue-100 text-blue-800' :
-                        payment.paymentType === 'reservation' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {payment.paymentType}
-                      </span>
+                      {payment.paymentType ? (
+                        <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                          payment.paymentType === 'full' ? 'bg-green-100 text-green-800' :
+                          payment.paymentType === 'downpayment' ? 'bg-blue-100 text-blue-800' :
+                          payment.paymentType === 'reservation' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {payment.paymentType}
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-1 rounded font-semibold bg-gray-100 text-gray-800">-</span>
+                      )}
                     </td>
                     <td className="p-4 text-sm font-bold text-black">
-                      ₱{payment.amount.toLocaleString()}
+                      ₱{(payment.amount || 0).toLocaleString()}
                     </td>
-                    <td className="p-4 text-sm text-darkGray">{payment.paymentMethod}</td>
+                    <td className="p-4 text-sm text-darkGray">{payment.paymentMethod || '-'}</td>
                     <td className="p-4 font-mono text-xs text-darkGray">
                       {payment.referenceNumber || '-'}
                     </td>
