@@ -66,13 +66,12 @@ export default async function handler(
 
       // Update booking status if full payment received
       if (paymentType === 'full') {
-        const { getSupabaseClient } = await import('../../lib/api/supabase-storage.js');
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          await supabase
-            .from('bookings')
-            .update({ status: 'Confirmed' })
-            .eq('id', bookingId);
+        const { updateBooking } = await import('../../lib/api/supabase-storage.js');
+        try {
+          await updateBooking(bookingId, { status: 'Confirmed' });
+        } catch (updateError) {
+          console.error('Error updating booking status:', updateError);
+          // Don't fail the payment creation if booking update fails
         }
       }
 
