@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { PaymentRecord, Booking } from '../../types';
 import { bookingsApi } from '../../lib/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api';
 
 interface PaymentHistoryViewProps {
   bookings: Booking[];
@@ -14,12 +14,15 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<string | null>(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [existingRefsForBooking, setExistingRefsForBooking] = useState<string[]>([]);
+  const [useCustomRef, setUseCustomRef] = useState(false);
   const [newPayment, setNewPayment] = useState({
     bookingId: '',
     amount: '',
     paymentType: 'reservation' as 'reservation' | 'downpayment' | 'full' | 'partial',
     paymentMethod: 'cash',
     referenceNumber: '',
+    customReferenceNumber: '',
     transactionId: '',
     notes: '',
   });
@@ -29,6 +32,33 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
   useEffect(() => {
     fetchPayments();
   }, []);
+
+  // Fetch existing reference numbers when booking is selected
+  useEffect(() => {
+    if (newPayment.bookingId) {
+      const fetchRefs = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/payments?bookingId=${newPayment.bookingId}`);
+          const data = await response.json();
+          if (data.success && data.data) {
+            const refs = (data.data || [])
+              .map((p: any) => p.reference_number)
+              .filter((ref: string | null) => ref && ref.trim())
+              .filter((ref: string, index: number, self: string[]) => self.indexOf(ref) === index);
+            setExistingRefsForBooking(refs);
+            if (refs.length > 0 && !useCustomRef) {
+              setNewPayment({ ...newPayment, referenceNumber: refs[0] });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching reference numbers:', error);
+        }
+      };
+      fetchRefs();
+    } else {
+      setExistingRefsForBooking([]);
+    }
+  }, [newPayment.bookingId]);
 
   const fetchPayments = async () => {
     try {
@@ -77,7 +107,7 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
           amount: parseFloat(newPayment.amount),
           paymentType: newPayment.paymentType,
           paymentMethod: newPayment.paymentMethod,
-          referenceNumber: newPayment.referenceNumber,
+          referenceNumber: useCustomRef ? newPayment.customReferenceNumber : newPayment.referenceNumber,
           transactionId: newPayment.transactionId,
           notes: newPayment.notes,
           paidBy: currentUser.username,
@@ -95,9 +125,12 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
           paymentType: 'reservation',
           paymentMethod: 'cash',
           referenceNumber: '',
+          customReferenceNumber: '',
           transactionId: '',
           notes: '',
         });
+        setUseCustomRef(false);
+        setExistingRefsForBooking([]);
         alert('Payment recorded successfully');
       } else {
         alert(data.error || 'Failed to add payment');
@@ -206,9 +239,9 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
                 return (
                   <tr key={payment.id} className="border-b border-mediumGray/50 last:border-b-0">
                     <td className="p-4 text-sm text-darkGray">
-                      {new Date(payment.paidAt).toLocaleDateString()}
+                      {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="p-4 font-mono text-sm text-darkGray">{payment.bookingId}</td>
+                    <td className="p-4 font-mono text-sm text-darkGray">{payment.bookingId || 'N/A'}</td>
                     <td className="p-4 text-sm font-medium text-black">
                       {booking?.customerName || 'N/A'}
                     </td>
@@ -312,13 +345,72 @@ export const PaymentHistoryView: React.FC<PaymentHistoryViewProps> = ({ bookings
               </div>
               <div>
                 <label className="block text-sm font-bold text-black mb-1">Reference Number</label>
-                <input
-                  type="text"
-                  value={newPayment.referenceNumber}
-                  onChange={(e) => setNewPayment({ ...newPayment, referenceNumber: e.target.value })}
-                  className="w-full border border-mediumGray rounded-lg p-2"
-                  placeholder="Reference number from payment screenshot"
-                />
+                
+                {/* Toggle between dropdown and custom input */}
+                {newPayment.bookingId && (
+                  <div className="mb-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setUseCustomRef(false)}
+                      className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${
+                        !useCustomRef
+                          ? 'bg-primaryRed text-white'
+                          : 'bg-lightGray text-darkGray hover:bg-mediumGray'
+                      }`}
+                    >
+                      Select Existing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUseCustomRef(true)}
+                      className={`px-3 py-1 text-xs rounded-md font-semibold transition-colors ${
+                        useCustomRef
+                          ? 'bg-primaryRed text-white'
+                          : 'bg-lightGray text-darkGray hover:bg-mediumGray'
+                      }`}
+                    >
+                      Enter New
+                    </button>
+                  </div>
+                )}
+
+                {!useCustomRef ? (
+                  existingRefsForBooking.length > 0 ? (
+                    <select
+                      value={newPayment.referenceNumber}
+                      onChange={(e) => setNewPayment({ ...newPayment, referenceNumber: e.target.value })}
+                      className="w-full border border-mediumGray rounded-lg p-2"
+                    >
+                      <option value="">Select a reference number</option>
+                      {existingRefsForBooking.map((ref) => (
+                        <option key={ref} value={ref}>
+                          {ref}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={newPayment.referenceNumber}
+                      onChange={(e) => setNewPayment({ ...newPayment, referenceNumber: e.target.value })}
+                      className="w-full border border-mediumGray rounded-lg p-2"
+                      placeholder="No existing refs. Enter reference number"
+                    />
+                  )
+                ) : (
+                  <input
+                    type="text"
+                    value={newPayment.customReferenceNumber}
+                    onChange={(e) => setNewPayment({ ...newPayment, customReferenceNumber: e.target.value })}
+                    className="w-full border border-mediumGray rounded-lg p-2"
+                    placeholder="Enter new reference number from payment screenshot"
+                  />
+                )}
+                <p className="text-xs text-darkGray mt-1">
+                  {!useCustomRef 
+                    ? 'Select from previously used reference numbers to avoid typos'
+                    : 'Enter the reference number from the payment screenshot'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-bold text-black mb-1">Transaction ID</label>

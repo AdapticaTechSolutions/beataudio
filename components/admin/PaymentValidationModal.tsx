@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Booking } from '../../types';
 import { XIcon } from '../icons';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface PaymentValidationModalProps {
   booking: Booking;
@@ -19,17 +21,54 @@ export const PaymentValidationModal: React.FC<PaymentValidationModalProps> = ({
   onValidate,
 }) => {
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [customReferenceNumber, setCustomReferenceNumber] = useState('');
+  const [existingReferenceNumbers, setExistingReferenceNumbers] = useState<string[]>([]);
+  const [isLoadingRefs, setIsLoadingRefs] = useState(true);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('gcash');
   const [notes, setNotes] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
+  const [useCustomRef, setUseCustomRef] = useState(false);
+
+  // Fetch existing reference numbers for this booking
+  useEffect(() => {
+    const fetchExistingRefs = async () => {
+      try {
+        setIsLoadingRefs(true);
+        const response = await fetch(`${API_BASE_URL}/payments?bookingId=${booking.id}`);
+        const data = await response.json();
+        if (data.success && data.data) {
+          // Extract unique reference numbers that are not null/empty
+          const refs = (data.data || [])
+            .map((p: any) => p.reference_number)
+            .filter((ref: string | null) => ref && ref.trim())
+            .filter((ref: string, index: number, self: string[]) => self.indexOf(ref) === index); // Unique
+          setExistingReferenceNumbers(refs);
+          
+          // If there are existing refs, pre-select the first one
+          if (refs.length > 0 && !useCustomRef) {
+            setReferenceNumber(refs[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching existing reference numbers:', error);
+      } finally {
+        setIsLoadingRefs(false);
+      }
+    };
+
+    fetchExistingRefs();
+  }, [booking.id]);
 
   const handleValidate = async () => {
     setError('');
     
+    // Get the selected reference number
+    const selectedRef = useCustomRef ? customReferenceNumber.trim() : referenceNumber.trim();
+    
     // Validation
-    if (!referenceNumber.trim()) {
+    if (!selectedRef) {
       setError('Reference number is required');
       return;
     }
@@ -42,7 +81,7 @@ export const PaymentValidationModal: React.FC<PaymentValidationModalProps> = ({
     setIsValidating(true);
     try {
       await onValidate(booking.id, {
-        referenceNumber: referenceNumber.trim(),
+        referenceNumber: selectedRef,
         amount: parseFloat(amount),
         paymentMethod,
         notes: notes.trim() || undefined,
@@ -107,16 +146,75 @@ export const PaymentValidationModal: React.FC<PaymentValidationModalProps> = ({
             <label className="block text-sm font-bold text-black mb-2">
               Payment Reference Number <span className="text-primaryRed">*</span>
             </label>
-            <input
-              type="text"
-              value={referenceNumber}
-              onChange={(e) => setReferenceNumber(e.target.value)}
-              placeholder="Enter reference number from payment screenshot"
-              className="w-full bg-lightGray border border-mediumGray rounded-md p-3 text-black focus:ring-2 focus:ring-primaryRed focus:border-primaryRed outline-none transition-all"
-            />
-            <p className="text-xs text-darkGray mt-1">
-              Cross-match this with the reference number from the payment screenshot sent via Messenger
-            </p>
+            
+            {/* Toggle between dropdown and custom input */}
+            <div className="mb-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setUseCustomRef(false)}
+                className={`px-3 py-1.5 text-sm rounded-md font-semibold transition-colors ${
+                  !useCustomRef
+                    ? 'bg-primaryRed text-white'
+                    : 'bg-lightGray text-darkGray hover:bg-mediumGray'
+                }`}
+              >
+                Select Existing
+              </button>
+              <button
+                type="button"
+                onClick={() => setUseCustomRef(true)}
+                className={`px-3 py-1.5 text-sm rounded-md font-semibold transition-colors ${
+                  useCustomRef
+                    ? 'bg-primaryRed text-white'
+                    : 'bg-lightGray text-darkGray hover:bg-mediumGray'
+                }`}
+              >
+                Enter New
+              </button>
+            </div>
+
+            {!useCustomRef ? (
+              <div>
+                {isLoadingRefs ? (
+                  <div className="w-full bg-lightGray border border-mediumGray rounded-md p-3 text-darkGray text-sm">
+                    Loading existing reference numbers...
+                  </div>
+                ) : existingReferenceNumbers.length > 0 ? (
+                  <select
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    className="w-full bg-lightGray border border-mediumGray rounded-md p-3 text-black focus:ring-2 focus:ring-primaryRed focus:border-primaryRed outline-none transition-all"
+                  >
+                    <option value="">Select a reference number</option>
+                    {existingReferenceNumbers.map((ref) => (
+                      <option key={ref} value={ref}>
+                        {ref}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full bg-yellow-50 border border-yellow-200 rounded-md p-3 text-yellow-800 text-sm">
+                    No existing reference numbers found. Please enter a new one.
+                  </div>
+                )}
+                <p className="text-xs text-darkGray mt-1">
+                  Select from previously used reference numbers for this booking to avoid typos
+                </p>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="text"
+                  value={customReferenceNumber}
+                  onChange={(e) => setCustomReferenceNumber(e.target.value)}
+                  placeholder="Enter new reference number from payment screenshot"
+                  className="w-full bg-lightGray border border-mediumGray rounded-md p-3 text-black focus:ring-2 focus:ring-primaryRed focus:border-primaryRed outline-none transition-all"
+                />
+                <p className="text-xs text-darkGray mt-1">
+                  Cross-match this with the reference number from the payment screenshot sent via Messenger
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
