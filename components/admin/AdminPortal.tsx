@@ -7,6 +7,7 @@ import { InquiriesView } from './InquiriesView';
 import { OrderHistoryView } from './OrderHistoryView';
 import { PaymentHistoryView } from './PaymentHistoryView';
 import { ArchiveView } from './ArchiveView';
+import { DashboardView } from './DashboardView';
 import { QuoteEditor } from './QuoteEditor';
 import { bookingsApi } from '../../lib/api';
 import type { Booking, User } from '../../types';
@@ -15,10 +16,10 @@ interface AdminPortalProps {
   onLogout: () => void;
 }
 
-export type AdminView = 'schedule' | 'inquiries' | 'orders' | 'payments' | 'archive';
+export type AdminView = 'dashboard' | 'schedule' | 'inquiries' | 'orders' | 'payments' | 'archive';
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
-  const [activeView, setActiveView] = useState<AdminView>('schedule');
+  const [activeView, setActiveView] = useState<AdminView>('dashboard');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,7 +64,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
   useEffect(() => {
     const handleHashSync = () => {
       const hash = window.location.hash;
-      if (hash.includes('/admin/inquiries')) {
+      if (hash.includes('/admin/dashboard')) {
+        setActiveView('dashboard');
+      } else if (hash.includes('/admin/inquiries')) {
         setActiveView('inquiries');
       } else if (hash.includes('/admin/orders')) {
         setActiveView('orders');
@@ -73,6 +76,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
         setActiveView('archive');
       } else if (hash.includes('/admin/schedule')) {
         setActiveView('schedule');
+      } else {
+        // Default to dashboard if no specific hash
+        setActiveView('dashboard');
       }
     };
 
@@ -223,6 +229,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onLogout }) => {
             </div>
           ) : (
             <>
+              {activeView === 'dashboard' && (
+                <DashboardView bookings={bookings} />
+              )}
               {activeView === 'schedule' && (
                 <ScheduleView 
                   bookings={bookings}

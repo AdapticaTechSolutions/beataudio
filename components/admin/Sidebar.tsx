@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Logo } from '../Logo';
-import { CalendarIcon, MailIcon, HistoryIcon, DollarIcon, ArchiveIcon, ShoppingBagIcon } from '../icons';
+import { CalendarIcon, MailIcon, HistoryIcon, DollarIcon, ArchiveIcon, ShoppingBagIcon, DashboardIcon } from '../icons';
 import { AdminView } from './AdminPortal';
 
 interface SidebarProps {
@@ -23,6 +23,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, isOpen
       </div>
       
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <a
+          href="#/admin/dashboard"
+          onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }}
+          className={`
+            flex items-center px-4 py-3 rounded-xl transition-all duration-200 group
+            ${activeView === 'dashboard' 
+                ? 'bg-primaryRed text-white font-semibold shadow-[0_0_20px_rgba(217,38,38,0.4)]' 
+                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+            }
+          `}
+        >
+          <DashboardIcon className={`w-5 h-5 mr-3 transition-colors ${activeView === 'dashboard' ? 'text-white' : 'text-gray-500 group-hover:text-white'}`} />
+          <span>Dashboard</span>
+        </a>
+        
         <a
           href="#/admin/schedule"
           onClick={(e) => { e.preventDefault(); onNavigate('schedule'); }}
